@@ -92,10 +92,22 @@ Every `social_items` document should include:
 }
 ```
 
+## Approved MVP targets
+
+Approved by user:
+
+```txt
+google_play_url=https://play.google.com/store/apps/details?id=id.bions.bnis.android&hl=id
+apple_app_store_url=https://apps.apple.com/id/app/bions/id6736508566
+youtube_channel=https://www.youtube.com/@BNI1946
+youtube_channel=https://www.youtube.com/@bnisekuritas46
+save_username=true
+```
+
 ## Immediate MVP
 
-1. Google Play reviews collector.
-2. Apple App Store reviews collector.
-3. YouTube official free-quota collector.
+1. Google Play reviews collector for `id.bions.bnis.android`.
+2. Apple App Store reviews collector for app id `6736508566`.
+3. YouTube official free-quota collector for `@BNI1946` and `@bnisekuritas46`.
 4. Stockbit Playwright spike, disabled by default.
 5. X official API later after product proves value.

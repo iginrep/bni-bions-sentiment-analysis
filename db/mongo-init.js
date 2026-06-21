@@ -45,7 +45,7 @@ db.collection_runs.createIndex({ scheduleId: 1, startedAt: -1 });
 // social_items
 db.social_items.createIndex(
   { platform: 1, sourceType: 1, sourceId: 1 },
-  { unique: true, partialFilterExpression: { sourceId: { $exists: true, $ne: null } } }
+  { unique: true, partialFilterExpression: { sourceId: { $type: 'string' } } }
 );
 db.social_items.createIndex(
   { platform: 1, sourceType: 1, 'content.contentHash': 1, parentSourceId: 1 },
@@ -123,10 +123,24 @@ const now = new Date();
 
 // seed keywords
 [
-  ['kw_bni_google_play', 'BNI', 'bni', 'brand', 'google_play', 'app_review', 'provider_google_play_reviews', { appId: 'id.bni.wondr', country: 'id', language: 'id', sort: 'newest' }],
-  ['kw_bni_app_store', 'BNI', 'bni', 'brand', 'app_store', 'app_review', 'provider_app_store_reviews', { appId: '6499518320', country: 'id' }],
+  ['kw_bions_google_play', 'BIONS', 'bions', 'product', 'google_play', 'app_review', 'provider_google_play_reviews', {
+    appId: 'id.bions.bnis.android',
+    url: 'https://play.google.com/store/apps/details?id=id.bions.bnis.android&hl=id',
+    country: 'id', language: 'id', sort: 'newest', saveUsername: true
+  }],
+  ['kw_bions_app_store', 'BIONS', 'bions', 'product', 'app_store', 'app_review', 'provider_app_store_reviews', {
+    appId: '6736508566',
+    url: 'https://apps.apple.com/id/app/bions/id6736508566',
+    country: 'id', saveUsername: true
+  }],
+  ['kw_bni_youtube_channel', 'BNI', 'bni', 'brand', 'youtube', 'comment', 'provider_youtube_comments', {
+    channelHandle: 'BNI1946', channelUrl: 'https://www.youtube.com/@BNI1946', saveUsername: true
+  }],
+  ['kw_bni_sekuritas_youtube_channel', 'BNI Sekuritas', 'bni_sekuritas', 'brand', 'youtube', 'comment', 'provider_youtube_comments', {
+    channelHandle: 'bnisekuritas46', channelUrl: 'https://www.youtube.com/@bnisekuritas46', saveUsername: true
+  }],
   ['kw_bni_news', 'BNI', 'bni', 'brand', 'news', 'news_article', 'provider_google_news_rss', { query: 'BNI OR "BNI Sekuritas" OR BIONS', country: 'id' }],
-  ['kw_bions_youtube', 'BIONS', 'bions', 'product', 'youtube', 'comment', 'provider_youtube_comments', { query: 'BIONS BNI Sekuritas' }],
+  ['kw_bions_youtube', 'BIONS', 'bions', 'product', 'youtube', 'comment', 'provider_youtube_comments', { query: 'BIONS BNI Sekuritas', saveUsername: true }],
   ['kw_bbni_stockbit', 'BBNI', 'bbni', 'ticker', 'stockbit', 'finance_forum', 'provider_stockbit_playwright', { symbol: 'BBNI' }]
 ].forEach(function (k) {
   db.keywords.updateOne(
