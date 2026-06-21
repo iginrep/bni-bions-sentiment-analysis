@@ -28,11 +28,21 @@ make export
 make api
 ```
 
-## Source caveats
+## Collector strategy
 
-- YouTube: official Data API is straightforward.
-- X/Twitter: needs API tier.
-- Instagram: Graph API limited to business/creator/owned media access.
-- TikTok: official comment access limited; scraping has ToS risk.
-- Threads: public search/replies limited.
-- Stockbit: no stable public comment API found; unofficial adapter should be marked fragile.
+Cheapest-first. Use free/public/unofficial collectors for MVP, keep risky collectors disabled by default, then upgrade to official API/vendor after the source proves value.
+
+Docs:
+
+- `docs/collector-strategy.md`
+- `docs/provider-decision-matrix.md`
+- `docs/source-limitations.md`
+
+MVP priority:
+
+1. Google Play reviews: `google-play-scraper`
+2. Apple App Store reviews: RSS JSON via `httpx`
+3. YouTube comments: official Data API v3 free quota
+4. News/RSS context: `httpx` + extraction
+5. Stockbit: Playwright PoC with dedicated account, disabled by default
+6. X/Instagram/TikTok/Threads: only after exact targets or vendor/API budget
