@@ -1,15 +1,13 @@
 services:
-  postgres:
-    image: postgres:16
+  mongo:
+    image: mongo:7
+    ports:
+      - "27017:27017"
     environment:
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: postgres
-      POSTGRES_DB: bni_bions_sentiment
-    ports: ["5432:5432"]
+      MONGO_INITDB_DATABASE: bni_bions_sentiment
     volumes:
-      - pgdata:/var/lib/postgresql/data
-  redis:
-    image: redis:7
-    ports: ["6379:6379"]
+      - mongo_data:/data/db
+      - ./db/mongo-init.js:/docker-entrypoint-initdb.d/mongo-init.js:ro
+
 volumes:
-  pgdata:
+  mongo_data:

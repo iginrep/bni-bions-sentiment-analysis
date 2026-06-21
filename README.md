@@ -2,6 +2,8 @@
 
 Monorepo sederhana untuk monitoring sentimen BNI Sekuritas dan aplikasi BIONS.
 
+Database: MongoDB (`bni_bions_sentiment`)
+
 Pipeline:
 
 1. keyword + schedule
