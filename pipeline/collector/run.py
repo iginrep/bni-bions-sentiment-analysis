@@ -11,6 +11,7 @@ from pipeline.collector.adapters.tiktok import TikTokResearchAdapter
 from pipeline.collector.adapters.twitter import TwitterAdapter
 from pipeline.collector.adapters.youtube import YouTubeAdapter
 from pipeline.collector.base import CollectorAdapter, RawSocialItem
+from pipeline.collector.config_validator import detect_missing_env
 from pipeline.collector.dedupe import dedupe_items
 from pipeline.collector.exceptions import CollectorNotConfigured, CollectorStopped
 
@@ -29,10 +30,35 @@ def remaining_platform_adapters(include_risky: bool = False) -> list[CollectorAd
     return adapters
 
 
+def validate_collectors(adapters: list[CollectorAdapter] | None = None) -> dict[str, dict[str, Any]]:
+    active_adapters = adapters if adapters is not None else remaining_platform_adapters(include_risky=True)
+    summary: dict[str, dict[str, Any]] = {}
+    for adapter in active_adapters:
+        platform = getattr(adapter, "platform", adapter.__class__.__name__)
+        required_env = getattr(adapter, "required_env", []) or []
+        missing_env = detect_missing_env(required_env) if required_env else []
+        summary[platform] = {
+            "required_env": required_env,
+            "missing_env": missing_env,
+            "configured": len(missing_env) == 0,
+            "enabled_by_default": getattr(adapter, "enabled_by_default", False),
+        }
+    return summary
+
+
+def build_report(
+    items: list[RawSocialItem],
+    adapters: list[CollectorAdapter] | None = None,
+) -> dict[str, Any]:
+    validation = validate_collectors(adapters)
+    return {"validation": validation, "collected_count": len(items)}
+
+
 def collect_sample(
     include_risky: bool = False,
     adapters: Iterable[CollectorAdapter] | None = None,
     return_report: bool = False,
+    write: bool = False,
 ) -> list[RawSocialItem] | tuple[list[RawSocialItem], dict[str, dict[str, Any]]]:
     items: list[RawSocialItem] = []
     report: dict[str, dict[str, Any]] = {}
@@ -55,6 +81,13 @@ def collect_sample(
         report[platform] = {"status": "ok", "count": len(collected)}
 
     deduped = dedupe_items(items)
+    if write:
+        try:
+            from pipeline.storage.social_items import persist_social_items
+
+            persist_social_items(deduped)
+        except Exception:
+            pass
     if return_report:
         return deduped, report
     return deduped
