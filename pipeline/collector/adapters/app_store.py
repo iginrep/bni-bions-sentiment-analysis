@@ -103,6 +103,7 @@ class AppStoreAdapter:
     cost_level = "free"
     risk_level = "low"
     enabled_by_default = True
+    required_env: list[str] = []
 
     def __init__(self, app_id: str = "6736508566", country: str = "id", timeout: float = 20.0) -> None:
         self.app_id = app_id

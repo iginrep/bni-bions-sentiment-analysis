@@ -186,6 +186,24 @@ Start here:
 | `docs/human-approval-checklist.md` | Approved sources and risk gates. |
 | `docs/labeling-guideline.md` | Sentiment labeling guide. |
 
+## Runbook
+
+Step-by-step guides for running each collector.
+
+| Guide | What it covers |
+| --- | --- |
+| [00 - Prerequisites](docs/runbook/00-prerequisites.md) | Setup: Python, venv, install, .env config |
+| [01 - Google Play](docs/runbook/01-google-play.md) | Collect app reviews (no API key) |
+| [02 - App Store](docs/runbook/02-app-store.md) | Collect app reviews (no API key) |
+| [03 - YouTube](docs/runbook/03-youtube.md) | Collect video comments (needs API key) |
+| [04 - X/Twitter](docs/runbook/04-x-twitter.md) | Collect mentions + replies (needs bearer token) |
+| [05 - TikTok](docs/runbook/05-tiktok.md) | Collect video comments (needs research token) |
+| [06 - Instagram](docs/runbook/06-instagram.md) | Collect post comments (needs graph token) |
+| [07 - Threads](docs/runbook/07-threads.md) | Collect thread replies (needs access token) |
+| [08 - Stockbit](docs/runbook/08-stockbit.md) | Collect discussions (public scrape, high risk) |
+| [09 - Run All](docs/runbook/09-run-all.md) | Run all collectors at once |
+| [10 - Troubleshooting](docs/runbook/10-troubleshooting.md) | Common errors and fixes |
+
 ## Development workflow
 
 Before claiming work complete:

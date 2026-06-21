@@ -62,6 +62,7 @@ class TikTokAdapter:
     cost_level = "free"
     risk_level = "medium"
     enabled_by_default = False
+    required_env: list[str] = ["TIKTOK_TARGET_URLS"]
 
     def __init__(self, target_urls: list[str] | None = None, client: httpx.Client | None = None) -> None:
         self.target_urls = target_urls if target_urls is not None else env_csv(os.getenv("TIKTOK_TARGET_URLS"))
@@ -111,6 +112,7 @@ class TikTokResearchAdapter:
     cost_level = "free_or_limited"
     risk_level = "low"
     enabled_by_default = False
+    required_env: list[str] = ["TIKTOK_RESEARCH_ACCESS_TOKEN", "TIKTOK_VIDEO_IDS"]
 
     def __init__(self, bearer_token: str | None = None, video_ids: list[str] | None = None, client: httpx.Client | None = None) -> None:
         self.bearer_token = bearer_token or os.getenv("TIKTOK_RESEARCH_ACCESS_TOKEN")

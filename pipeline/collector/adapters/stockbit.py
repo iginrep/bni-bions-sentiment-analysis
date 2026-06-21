@@ -41,6 +41,7 @@ class StockbitAdapter:
     cost_level = "free"
     risk_level = "high"
     enabled_by_default = False
+    required_env: list[str] = ["STOCKBIT_TARGET_URLS"]
 
     def __init__(self, target_urls: list[str] | None = None) -> None:
         self.target_urls = target_urls if target_urls is not None else env_csv(os.getenv("STOCKBIT_TARGET_URLS"))

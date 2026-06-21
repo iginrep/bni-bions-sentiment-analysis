@@ -165,6 +165,7 @@ class YouTubeAdapter:
     cost_level = "free_quota"
     risk_level = "low"
     enabled_by_default = True
+    required_env: list[str] = ["YOUTUBE_API_KEY"]
 
     def __init__(self, channel_urls: Iterable[str] | None = None, client: httpx.Client | None = None) -> None:
         self.channel_urls = list(channel_urls or DEFAULT_CHANNEL_URLS)

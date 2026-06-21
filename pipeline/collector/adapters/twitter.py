@@ -25,6 +25,7 @@ class TwitterAdapter:
     cost_level = "paid_or_limited"
     risk_level = "medium"
     enabled_by_default = False
+    required_env: list[str] = ["X_BEARER_TOKEN"]
 
     def __init__(
         self,

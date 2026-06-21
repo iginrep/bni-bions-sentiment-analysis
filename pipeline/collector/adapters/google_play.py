@@ -68,6 +68,7 @@ class GooglePlayAdapter:
     cost_level = "free"
     risk_level = "low"
     enabled_by_default = True
+    required_env: list[str] = []
 
     def __init__(self, package_id: str = DEFAULT_PACKAGE_ID, lang: str = "id", country: str = "id", sort: str = "NEWEST") -> None:
         self.package_id = package_id

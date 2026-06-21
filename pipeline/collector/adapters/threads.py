@@ -107,6 +107,7 @@ class ThreadsAdapter:
     cost_level = "free_or_limited"
     risk_level = "low"
     enabled_by_default = False
+    required_env: list[str] = ["THREADS_ACCESS_TOKEN", "THREADS_MEDIA_IDS"]
 
     def __init__(self, access_token: str | None = None, media_ids: list[str] | None = None, client: httpx.Client | None = None) -> None:
         self.access_token = access_token or os.getenv("THREADS_ACCESS_TOKEN")
