@@ -41,10 +41,19 @@ class RawSocialItem:
 
     def as_dict(self) -> dict[str, Any]:
         data = asdict(self)
-        for key in ("posted_at", "collected_at"):
-            if data[key] is not None:
-                data[key] = data[key].isoformat()
-        return data
+
+        def _serialize(value: Any) -> Any:
+            if isinstance(value, datetime):
+                return value.isoformat()
+            if isinstance(value, dict):
+                return {key: _serialize(item) for key, item in value.items()}
+            if isinstance(value, list):
+                return [_serialize(item) for item in value]
+            if isinstance(value, tuple):
+                return tuple(_serialize(item) for item in value)
+            return value
+
+        return _serialize(data)
 
     def as_json(self) -> str:
         return json.dumps(self.as_dict(), ensure_ascii=False, sort_keys=True)

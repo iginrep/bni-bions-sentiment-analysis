@@ -1,4 +1,5 @@
 import pytest
+from datetime import datetime, timezone
 from pipeline.collector.normalizer import normalize_text, detect_target_entity
 from pipeline.collector.dedupe import dedupe_items
 from pipeline.collector.base import RawSocialItem
@@ -40,3 +41,19 @@ def test_raw_social_item_has_universal_thread_fields():
     assert data["parent_source_id"] == "comment-1"
     assert data["depth"] == 2
     assert data["relation_type"] == "reply"
+
+
+def test_raw_social_item_as_json_serializes_datetime_fields():
+    item = RawSocialItem(
+        platform="youtube",
+        source_type="comment",
+        source_id="comment-1",
+        keyword="bions",
+        target_entity="bions",
+        text="ok",
+        posted_at=datetime(2026, 6, 1, 12, 0, tzinfo=timezone.utc),
+    )
+
+    payload = item.as_json()
+
+    assert "2026-06-01T12:00:00+00:00" in payload
