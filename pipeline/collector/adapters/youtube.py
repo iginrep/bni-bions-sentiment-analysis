@@ -2,10 +2,12 @@ from __future__ import annotations
 
 import os
 import re
+import time
 import xml.etree.ElementTree as ET
-from datetime import datetime
+from datetime import datetime, timezone
 from html import unescape
 from pathlib import Path
+from collections.abc import Callable
 from typing import Iterable
 
 import httpx
@@ -17,6 +19,7 @@ from pipeline.collector.normalizer import normalize_text
 
 DEFAULT_CHANNEL_URLS = ["https://www.youtube.com/@BNI1946", "https://www.youtube.com/@bnisekuritas46"]
 YOUTUBE_RSS_URL = "https://www.youtube.com/feeds/videos.xml?channel_id={channel_id}"
+YOUTUBE_SEARCH_URL = "https://www.googleapis.com/youtube/v3/search"
 YOUTUBE_COMMENT_THREADS_URL = "https://www.googleapis.com/youtube/v3/commentThreads"
 ATOM_NS = {"atom": "http://www.w3.org/2005/Atom", "yt": "http://www.youtube.com/xml/schemas/2015"}
 
@@ -50,6 +53,16 @@ def _parse_datetime(value: str | None) -> datetime | None:
         return datetime.fromisoformat(value.replace("Z", "+00:00"))
     except ValueError:
         return None
+
+
+def _utc(value: datetime) -> datetime:
+    if value.tzinfo is None:
+        return value.replace(tzinfo=timezone.utc)
+    return value.astimezone(timezone.utc)
+
+
+def _youtube_timestamp(value: datetime) -> str:
+    return _utc(value).replace(microsecond=0).isoformat().replace("+00:00", "Z")
 
 
 def parse_youtube_feed(xml_text: str, keyword: str, target_entity: str) -> list[RawSocialItem]:
@@ -167,9 +180,29 @@ class YouTubeAdapter:
     enabled_by_default = True
     required_env: list[str] = ["YOUTUBE_API_KEY"]
 
-    def __init__(self, channel_urls: Iterable[str] | None = None, client: httpx.Client | None = None) -> None:
+    def __init__(
+        self,
+        channel_urls: Iterable[str] | None = None,
+        client: httpx.Client | None = None,
+        max_backfill_requests: int | None = None,
+        request_delay_seconds: float | None = None,
+        sleep_fn: Callable[[float], None] | None = None,
+    ) -> None:
         self.channel_urls = list(channel_urls or DEFAULT_CHANNEL_URLS)
         self.client = client or httpx.Client(timeout=20.0, follow_redirects=True, headers={"User-Agent": "Mozilla/5.0 BNI-BIONS-sentiment-monitor/0.1"})
+        self.max_backfill_requests = max_backfill_requests if max_backfill_requests is not None else int(_load_env_value("YOUTUBE_BACKFILL_MAX_REQUESTS") or "20")
+        self.request_delay_seconds = request_delay_seconds if request_delay_seconds is not None else float(_load_env_value("YOUTUBE_BACKFILL_REQUEST_DELAY_SECONDS") or "1.0")
+        self.sleep_fn = sleep_fn or time.sleep
+        self._backfill_requests_used = 0
+
+    def _get_youtube_api(self, url: str, params: dict[str, str | int]) -> httpx.Response:
+        if self._backfill_requests_used >= self.max_backfill_requests:
+            raise CollectorStopped("youtube backfill request budget exhausted")
+        self._backfill_requests_used += 1
+        response = self.client.get(url, params=params)
+        if self.request_delay_seconds > 0:
+            self.sleep_fn(self.request_delay_seconds)
+        return response
 
     def collect(self, keyword: str, target_entity: str, limit: int = 50) -> list[RawSocialItem]:
         video_items: list[RawSocialItem] = []
@@ -192,25 +225,104 @@ class YouTubeAdapter:
                 break
         return comments[:limit] or video_items[:limit]
 
+    def collect_backfill(
+        self,
+        keyword: str,
+        target_entity: str,
+        since: datetime,
+        until: datetime,
+        limit: int = 50,
+    ) -> list[RawSocialItem]:
+        key = _load_env_value("YOUTUBE_API_KEY")
+        if not key:
+            raise CollectorNotConfigured("YOUTUBE_API_KEY missing")
+
+        limit = max(0, min(limit, 5000))
+        if limit == 0:
+            return []
+
+        comments: list[RawSocialItem] = []
+        for channel_url in self.channel_urls:
+            channel_id = self.resolve_channel_id(channel_url)
+            for video_id in self.search_channel_videos(channel_id, since=since, until=until, api_key=key):
+                comments.extend(
+                    self.collect_comments(
+                        video_id,
+                        keyword=keyword,
+                        target_entity=target_entity,
+                        limit=max(1, limit - len(comments)),
+                        api_key=key,
+                    )
+                )
+                comments = [item for item in comments if item.posted_at and _utc(since) <= _utc(item.posted_at) < _utc(until)]
+                if len(comments) >= limit:
+                    return comments[:limit]
+        return comments[:limit]
+
+    def search_channel_videos(self, channel_id: str, since: datetime, until: datetime, api_key: str) -> list[str]:
+        video_ids: list[str] = []
+        page_token: str | None = None
+        while True:
+            params = {
+                "part": "snippet",
+                "channelId": channel_id,
+                "type": "video",
+                "order": "date",
+                "maxResults": 50,
+                "publishedAfter": _youtube_timestamp(since),
+                "publishedBefore": _youtube_timestamp(until),
+                "key": api_key,
+            }
+            if page_token:
+                params["pageToken"] = page_token
+            response = self._get_youtube_api(YOUTUBE_SEARCH_URL, params=params)
+            if response.status_code in {401, 403, 429}:
+                raise CollectorStopped(f"youtube search stopped: status {response.status_code}")
+            response.raise_for_status()
+            payload = response.json()
+            for item in payload.get("items", []):
+                video_id = (item.get("id") or {}).get("videoId")
+                if video_id:
+                    video_ids.append(video_id)
+            page_token = payload.get("nextPageToken")
+            if not page_token:
+                break
+        return video_ids
+
     def collect_comments(self, video_id: str, keyword: str, target_entity: str, limit: int = 50, api_key: str | None = None) -> list[RawSocialItem]:
         key = api_key or _load_env_value("YOUTUBE_API_KEY")
         if not key:
             raise CollectorNotConfigured("YOUTUBE_API_KEY missing")
-        response = self.client.get(
-            YOUTUBE_COMMENT_THREADS_URL,
-            params={
+        limit = max(0, min(limit, 5000))
+        if limit == 0:
+            return []
+
+        items: list[RawSocialItem] = []
+        page_token: str | None = None
+        while len(items) < limit:
+            params = {
                 "part": "snippet,replies",
                 "videoId": video_id,
-                "maxResults": max(1, min(limit, 100)),
+                "maxResults": max(1, min(limit - len(items), 100)),
                 "order": "time",
                 "textFormat": "plainText",
                 "key": key,
-            },
-        )
-        if response.status_code in {401, 403, 429}:
-            raise CollectorStopped(f"youtube comments stopped: status {response.status_code}")
-        response.raise_for_status()
-        return parse_youtube_comment_threads(response.json(), keyword=keyword, target_entity=target_entity)[:limit]
+            }
+            if page_token:
+                params["pageToken"] = page_token
+            response = self._get_youtube_api(YOUTUBE_COMMENT_THREADS_URL, params=params)
+            if response.status_code in {401, 403, 429}:
+                raise CollectorStopped(f"youtube comments stopped: status {response.status_code}")
+            response.raise_for_status()
+            payload = response.json()
+            page_items = parse_youtube_comment_threads(payload, keyword=keyword, target_entity=target_entity)
+            if not page_items:
+                break
+            items.extend(page_items)
+            page_token = payload.get("nextPageToken")
+            if not page_token:
+                break
+        return items[:limit]
 
     def resolve_channel_id(self, channel_url: str) -> str:
         if "/channel/" in channel_url:
