@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Any
 from urllib.parse import urlencode
 
@@ -30,6 +30,12 @@ def _parse_datetime(value: str | None) -> datetime | None:
         return datetime.fromisoformat(value.replace("Z", "+00:00"))
     except ValueError:
         return None
+
+
+def _utc(value: datetime) -> datetime:
+    if value.tzinfo is None:
+        return value.replace(tzinfo=timezone.utc)
+    return value.astimezone(timezone.utc)
 
 
 def parse_app_store_reviews(payload: dict[str, Any], keyword: str, target_entity: str) -> list[RawSocialItem]:
@@ -127,5 +133,36 @@ class AppStoreAdapter:
             if not page_items:
                 break
             items.extend(page_items)
+            page += 1
+        return items[:limit]
+
+    def collect_backfill(
+        self,
+        keyword: str,
+        target_entity: str,
+        since: datetime,
+        until: datetime,
+        limit: int = 50,
+    ) -> list[RawSocialItem]:
+        limit = max(0, min(limit, 500))
+        if limit == 0:
+            return []
+
+        since_utc = _utc(since)
+        until_utc = _utc(until)
+        items: list[RawSocialItem] = []
+        page = 1
+        while len(items) < limit and page <= 10:
+            response = httpx.get(self.review_feed_url(page), timeout=self.timeout)
+            response.raise_for_status()
+            page_items = parse_app_store_reviews(response.json(), keyword=keyword, target_entity=target_entity)
+            if not page_items:
+                break
+
+            in_window = [item for item in page_items if item.posted_at and since_utc <= _utc(item.posted_at) < until_utc]
+            items.extend(in_window)
+            oldest = min((_utc(item.posted_at) for item in page_items if item.posted_at), default=None)
+            if oldest is not None and oldest < since_utc:
+                break
             page += 1
         return items[:limit]
