@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Any, Iterable
 
 from pipeline.collector.base import RawSocialItem
@@ -20,6 +20,12 @@ def _parse_datetime(value: Any) -> datetime | None:
         except ValueError:
             return None
     return None
+
+
+def _utc(value: datetime) -> datetime:
+    if value.tzinfo is None:
+        return value.replace(tzinfo=timezone.utc)
+    return value.astimezone(timezone.utc)
 
 
 def parse_google_play_reviews(reviews: Iterable[dict[str, Any]], keyword: str, target_entity: str) -> list[RawSocialItem]:
@@ -90,3 +96,43 @@ class GooglePlayAdapter:
             count=max(0, min(limit, 200)),
         )
         return parse_google_play_reviews(result, keyword=keyword, target_entity=target_entity)[:limit]
+
+    def collect_backfill(
+        self,
+        keyword: str,
+        target_entity: str,
+        since: datetime,
+        until: datetime,
+        limit: int = 50,
+    ) -> list[RawSocialItem]:
+        try:
+            from google_play_scraper import Sort, reviews
+        except ImportError as exc:
+            raise CollectorStopped("google-play-scraper package missing; install collector deps") from exc
+
+        since_utc = _utc(since)
+        until_utc = _utc(until)
+        limit = max(0, min(limit, 5000))
+        if limit == 0:
+            return []
+
+        sort_value = getattr(Sort, self.sort, Sort.NEWEST)
+        continuation = None
+        items: list[RawSocialItem] = []
+        while len(items) < limit:
+            result, continuation = reviews(
+                self.package_id,
+                lang=self.lang,
+                country=self.country,
+                sort=sort_value,
+                count=min(200, max(1, limit - len(items))),
+                continuation_token=continuation,
+            )
+            page_items = parse_google_play_reviews(result, keyword=keyword, target_entity=target_entity)
+            if not page_items:
+                break
+            items.extend([item for item in page_items if item.posted_at and since_utc <= _utc(item.posted_at) < until_utc])
+            oldest = min((_utc(item.posted_at) for item in page_items if item.posted_at), default=None)
+            if continuation is None or (oldest is not None and oldest < since_utc):
+                break
+        return items[:limit]
