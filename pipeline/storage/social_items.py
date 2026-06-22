@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from datetime import datetime
 from typing import Any
 from pymongo.errors import DuplicateKeyError
 
@@ -55,3 +56,21 @@ def persist_social_items(items: list[RawSocialItem | dict[str, Any]]) -> int:
         except DuplicateKeyError:
             continue
     return inserted
+
+
+def _posted_at_window_query(start: Any, end: Any) -> dict[str, Any]:
+    clauses = [{"postedAt": {"$gte": start, "$lt": end}}]
+    if isinstance(start, datetime) and isinstance(end, datetime):
+        clauses.append({"postedAt": {"$gte": start.isoformat(), "$lt": end.isoformat()}})
+        clauses.append({"postedAt": {"$gte": start.replace(tzinfo=None).isoformat(), "$lt": end.replace(tzinfo=None).isoformat()}})
+    return {"$or": clauses}
+
+
+def social_items_exist(platform: str, start: Any, end: Any) -> bool:
+    return _collection().find_one(
+        {
+            "platform": platform,
+            **_posted_at_window_query(start, end),
+        },
+        {"_id": 1},
+    ) is not None
