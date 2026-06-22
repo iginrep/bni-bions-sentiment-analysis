@@ -11,62 +11,88 @@ Usage:
 
     # IndoBERT (slower, needs torch, higher accuracy)
     result = classify("aplikasi ini bagus", method="indobert")
+
+Environment variables:
+    INDOBERT_MODEL_NAME: HuggingFace model ID (default: intanm/indonesian_financial_sentiment_analysis)
 """
 
+import os
 from pipeline.sentiment.preprocess import clean_text
 from pipeline.sentiment.preprocessing import preprocess
 from pipeline.sentiment.rules import classify_rule_based
 
 MODEL_VERSION_RULES = "rules-v0.1"
-MODEL_VERSION_INDOBERT = "indobert-base-p1"
+
+# Default: Indonesian financial sentiment model (fine-tuned, 3-label)
+# Alternatives tested:
+#   - indobenchmark/indobert-base-p1 → base encoder, NO classification head, random labels
+#   - ShinyQ/indobert-sentiment-analysis-indonesian-university-reviews → wrong domain, over-neutral
+#   - intanm/indonesian_financial_sentiment_analysis → financial domain, NEGATIVE/NEUTRAL/POSITIVE ✓
+DEFAULT_MODEL = "intanm/indonesian_financial_sentiment_analysis"
 
 # Lazy-loaded IndoBERT components
 _indobert_tokenizer = None
 _indobert_model = None
+_indobert_model_name = None
+_indobert_labels = None
 
 
 def _get_indobert():
-    """Lazy-load IndoBERT model + tokenizer (heavy, only when needed)."""
-    global _indobert_tokenizer, _indobert_model
+    """Lazy-load IndoBERT model + tokenizer (heavy, only when needed).
+
+    Uses INDOBERT_MODEL_NAME env var if set, otherwise defaults to
+    intanm/indonesian_financial_sentiment_analysis.
+    """
+    global _indobert_tokenizer, _indobert_model, _indobert_model_name, _indobert_labels
+
+    model_name = os.environ.get("INDOBERT_MODEL_NAME", DEFAULT_MODEL)
+
+    # Re-init if model changed
+    if _indobert_model is not None and _indobert_model_name != model_name:
+        _indobert_tokenizer = None
+        _indobert_model = None
+
     if _indobert_tokenizer is None:
-        from pipeline.sentiment.tokenizer import IndoBertTokenizer
-        _indobert_tokenizer = IndoBertTokenizer()
+        from transformers import AutoTokenizer
+        _indobert_tokenizer = AutoTokenizer.from_pretrained(model_name)
+
     if _indobert_model is None:
         from transformers import AutoModelForSequenceClassification
-        _indobert_model = AutoModelForSequenceClassification.from_pretrained(
-            "indobenchmark/indobert-base-p1",
-            num_labels=3,  # positive, negative, neutral
-        )
+        _indobert_model = AutoModelForSequenceClassification.from_pretrained(model_name)
         _indobert_model.eval()
-    return _indobert_tokenizer, _indobert_model
+        _indobert_model_name = model_name
+        _indobert_labels = _indobert_model.config.id2label  # {0: 'NEGATIVE', 1: 'NEUTRAL', 2: 'POSITIVE'}
+
+    return _indobert_tokenizer, _indobert_model, _indobert_labels
 
 
 def _classify_indobert(text: str) -> dict:
     """Classify using IndoBERT. Returns label, score, confidence, topics."""
     import torch
 
-    tok, model = _get_indobert()
+    tok, model, id2label = _get_indobert()
+    num_labels = model.config.num_labels
 
     # Preprocess + tokenize
     cleaned = preprocess(text, mode="indobert")
-    inputs = tok.encode(cleaned, return_tensors="pt")
+    inputs = tok(cleaned, return_tensors="pt", truncation=True, padding="max_length", max_length=128)
 
     # Forward pass
     with torch.no_grad():
-        outputs = model(**inputs)
-        logits = outputs.logits
-        probs = torch.softmax(logits, dim=-1)
+        probs = torch.softmax(model(**inputs).logits, dim=-1)[0]
 
-    # Map to labels
-    labels = ["negative", "neutral", "positive"]
-    pred_idx = probs.argmax(dim=-1).item()
-    label = labels[pred_idx]
-    confidence = probs[0][pred_idx].item()
+    # Map to labels using model's own id2label
+    pred_idx = probs.argmax().item()
+    raw_label = id2label[pred_idx]
+    label = raw_label.lower()
 
-    # Score: positive → positive score, negative → negative score
-    pos_score = probs[0][2].item()
-    neg_score = probs[0][0].item()
-    score = pos_score - neg_score  # range [-1, 1]
+    confidence = probs[pred_idx].item()
+
+    # Score: pos - neg, range [-1, 1]
+    # Find pos/neg indices by label name
+    neg_idx = next((i for i, l in id2label.items() if "neg" in l.lower()), 0)
+    pos_idx = next((i for i, l in id2label.items() if "pos" in l.lower()), num_labels - 1)
+    score = probs[pos_idx].item() - probs[neg_idx].item()
 
     # Topic detection (reuse rule-based topic rules)
     from pipeline.sentiment.rules import TOPIC_RULES
@@ -86,15 +112,16 @@ def classify(text: str, method: str = "rule_based") -> dict:
 
     Args:
         text: raw input text
-        method: "rule_based" (fast) or "indobert" (accurate)
+        method: "rule_based" (fast) or "indobert" (accurate, needs torch)
 
     Returns:
         dict with: label, score, confidence, topics, cleaned_text, method, model_version
     """
     if method == "indobert":
+        model_name = os.environ.get("INDOBERT_MODEL_NAME", DEFAULT_MODEL)
         result = _classify_indobert(text)
         result["method"] = "indobert"
-        result["model_version"] = MODEL_VERSION_INDOBERT
+        result["model_version"] = model_name
         result["cleaned_text"] = preprocess(text, mode="indobert")
     else:
         cleaned = clean_text(text)

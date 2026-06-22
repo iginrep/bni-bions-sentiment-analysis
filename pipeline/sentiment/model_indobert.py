@@ -7,22 +7,34 @@ Usage:
     from pipeline.sentiment.model_indobert import IndoBertClassifier
 
     clf = IndoBertClassifier()
-    result = clf.classify("aplikasi ini bagus sekali")
+    result = clf.predict("Aplikasi ini error terus")
 """
 
-from pipeline.sentiment.classifier import classify
+from pipeline.sentiment.classifier import classify, DEFAULT_MODEL
 
 
 class IndoBertClassifier:
-    """IndoBERT sentiment classifier for Indonesian text."""
+    """Sentiment classifier using IndoBERT (fine-tuned financial model)."""
 
-    def __init__(self, model_name: str = "indobenchmark/indobert-base-p1"):
-        self.model_name = model_name
+    def __init__(self, model_name: str | None = None):
+        """Initialize with optional custom model name.
 
-    def classify(self, text: str) -> dict:
-        """Classify sentiment of a single text."""
+        Args:
+            model_name: HuggingFace model ID. Defaults to intanm/indonesian_financial_sentiment_analysis.
+        """
+        if model_name:
+            import os
+            os.environ["INDOBERT_MODEL_NAME"] = model_name
+
+    def predict(self, text: str) -> dict:
+        """Classify sentiment of Indonesian text.
+
+        Returns:
+            dict with: label, score, confidence, topics, cleaned_text, method, model_version
+        """
         return classify(text, method="indobert")
 
-    def classify_batch(self, texts: list[str]) -> list[dict]:
-        """Classify sentiment of multiple texts."""
-        return [classify(t, method="indobert") for t in texts]
+    @classmethod
+    def from_pretrained(cls, model_name: str) -> "IndoBertClassifier":
+        """Factory: create classifier from a specific HuggingFace model."""
+        return cls(model_name=model_name)
