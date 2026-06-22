@@ -82,7 +82,7 @@ Reasons:
 ```txt
 apps/api/app/                 FastAPI application
 pipeline/collector/           adapters, normalization, dedupe, backfill runner
-pipeline/storage/             social_items persistence, checkpoint store
+pipeline/storage/             MongoDB persistence for all 14 collections
 pipeline/sentiment/           preprocessing, rules, classifier hooks
 pipeline/scheduler/           APScheduler jobs
 pipeline/export/              CSV/XLSX export

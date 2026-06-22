@@ -55,7 +55,7 @@ Core modules:
 | `apps/api/` | FastAPI service for health, comments, sentiment, exports, keywords, schedules. |
 | `apps/dashboard/` | Next.js dashboard scaffold. |
 | `pipeline/collector/` | Platform adapters, canonical data model, normalization, dedupe, backfill runner. |
-| `pipeline/storage/` | Social items persistence, checkpoint store for backfill. |
+| `pipeline/storage/` | MongoDB persistence — all 14 collections (social_items, sentiment_results, collection_runs, sentiment_jobs, checkpoints, providers, keywords, schedules, exports, dashboard, labeled_examples, model_versions, system_events). |
 | `pipeline/sentiment/` | Text preprocessing, rule-based sentiment, future model hooks. |
 | `pipeline/scheduler/` | Scheduled collector/analyzer jobs. |
 | `pipeline/export/` | CSV/XLSX export helpers. |
@@ -84,16 +84,19 @@ Run pipeline pieces:
 
 ```bash
 make collect
+make backfill
+make sentiment-backfill
 make analyze
 make export
 make api
-make backfill
 ```
 
 Equivalent direct commands:
 
 ```bash
 python3 -m pipeline.collector.run
+python3 -m pipeline.collector.backfill
+python3 -c "from pipeline.sentiment.run import backfill_sentiment; print(backfill_sentiment())"
 python3 -m pipeline.sentiment.run
 python3 -m pipeline.export.csv_export
 python3 -m uvicorn apps.api.app.main:app --reload

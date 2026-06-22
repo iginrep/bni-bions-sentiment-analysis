@@ -1,7 +1,7 @@
 PY=python3
 COMPOSE?=docker-compose
 
-.PHONY: test collect backfill analyze export api mongo-up mongo-down mongo-logs mongo-shell mongo-status
+.PHONY: test collect backfill sentiment-backfill analyze export api mongo-up mongo-down mongo-logs mongo-shell mongo-status
 
 test:
 	$(PY) -m pytest -q
@@ -11,6 +11,9 @@ collect:
 
 backfill:
 	$(PY) -m pipeline.collector.backfill
+
+sentiment-backfill:
+	$(PY) -c "from dotenv import load_dotenv; load_dotenv(); from pipeline.sentiment.run import backfill_sentiment; print(f'backfilled {backfill_sentiment()} items')"
 
 analyze:
 	$(PY) -m pipeline.sentiment.run

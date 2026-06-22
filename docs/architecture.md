@@ -18,4 +18,18 @@ Core design rule: keep platform payload raw, then normalize to one canonical con
 
 Collector rule: cheapest useful source first. Official/paid APIs are promotion targets after the source proves value.
 
-Storage: `pipeline/storage/social_items.py` (canonical items), `pipeline/storage/backfill_checkpoints.py` (window status).
+Storage: 14 MongoDB collections accessed via `pipeline/storage/`:
+- `social_items` — canonical normalized items (collector writes, API reads)
+- `collection_checkpoints` — backfill window status (skip/resume)
+- `collection_runs` — per-run audit trail (platform, status, counts, duration)
+- `collector_providers` — adapter registry + health tracking
+- `keywords` — search keyword registry
+- `schedules` — cron schedule definitions (scheduler reads)
+- `sentiment_results` — classification output per item
+- `sentiment_jobs` — sentiment run metadata (method, status, timing)
+- `exports` — CSV/XLSX export log
+- `dashboard_views` — saved dashboard filter configs
+- `dashboard_actions` — user action audit (view, favorite, comment)
+- `system_events` — pipeline event log (info, error, warn)
+- `labeled_examples` — manual label annotations for training
+- `model_versions` — active model registry (method, version, active flag)
