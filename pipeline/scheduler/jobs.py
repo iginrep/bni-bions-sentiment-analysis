@@ -1,10 +1,7 @@
 from __future__ import annotations
-from pipeline.collector.run import collect_sample
-from pipeline.sentiment.classifier import classify
+from pipeline.sentiment.run import run_sentiment_analysis
 
 
 def collect_and_analyze() -> list[dict]:
-    results = []
-    for item in collect_sample():
-        results.append({"item": item.as_dict(), "sentiment": classify(item.text)})
-    return results
+    """Scheduled collection + analysis. Writes to Mongo collections."""
+    return run_sentiment_analysis(write=True)

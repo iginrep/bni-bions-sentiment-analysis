@@ -22,6 +22,12 @@ def export_csv(path: str = "data/exports/sample_sentiment.csv") -> str:
     out = Path(path)
     out.parent.mkdir(parents=True, exist_ok=True)
     pd.DataFrame(rows).to_csv(out, index=False)
+    try:
+        from pipeline.storage.exports import log_export
+
+        log_export("csv", str(out), row_count=len(rows))
+    except Exception:
+        pass
     return str(out)
 
 

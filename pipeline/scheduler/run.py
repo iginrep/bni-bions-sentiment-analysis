@@ -5,7 +5,25 @@ from pipeline.scheduler.jobs import collect_and_analyze
 
 def main():
     scheduler = BlockingScheduler(timezone="Asia/Jakarta")
-    scheduler.add_job(collect_and_analyze, "cron", hour="8,18", minute=0)
+    try:
+        from pipeline.storage.schedules import list_schedules
+
+        schedules = list_schedules(active_only=True)
+    except Exception:
+        schedules = []
+
+    if schedules:
+        for schedule in schedules:
+            cron = schedule.get("cron") or {}
+            scheduler.add_job(
+                collect_and_analyze,
+                "cron",
+                id=str(schedule.get("_id")),
+                hour=cron.get("hour", "8,18"),
+                minute=cron.get("minute", 0),
+            )
+    else:
+        scheduler.add_job(collect_and_analyze, "cron", hour="8,18", minute=0)
     scheduler.start()
 
 

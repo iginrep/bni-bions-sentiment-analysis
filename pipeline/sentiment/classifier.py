@@ -9,4 +9,10 @@ def classify(text: str) -> dict:
     result["cleaned_text"] = cleaned
     result["method"] = "rule_based"
     result["model_version"] = "rules-v0.1"
+    try:
+        from pipeline.storage.model_versions import ensure_model_version
+
+        ensure_model_version("rule_based", "rules-v0.1", active=True)
+    except Exception:
+        pass
     return result

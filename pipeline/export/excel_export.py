@@ -7,5 +7,12 @@ def export_excel(path: str = "data/exports/sample_sentiment.xlsx") -> str:
     csv_path = export_csv("data/exports/.tmp_sample.csv")
     out = Path(path)
     out.parent.mkdir(parents=True, exist_ok=True)
-    pd.read_csv(csv_path).to_excel(out, index=False)
+    df = pd.read_csv(csv_path)
+    df.to_excel(out, index=False)
+    try:
+        from pipeline.storage.exports import log_export
+
+        log_export("xlsx", str(out), row_count=len(df))
+    except Exception:
+        pass
     return str(out)
