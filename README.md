@@ -56,7 +56,7 @@ Core modules:
 | `apps/dashboard/` | Next.js dashboard scaffold. |
 | `pipeline/collector/` | Platform adapters, canonical data model, normalization, dedupe, backfill runner. |
 | `pipeline/storage/` | MongoDB persistence — all 14 collections (social_items, sentiment_results, collection_runs, sentiment_jobs, checkpoints, providers, keywords, schedules, exports, dashboard, labeled_examples, model_versions, system_events). |
-| `pipeline/sentiment/` | Text preprocessing, rule-based sentiment, future model hooks. |
+| `pipeline/sentiment/` | Indonesian text preprocessing (cleaning, slang normalization, stopwords, stemming), rule-based classifier, IndoBERT tokenizer + model wrapper. |
 | `pipeline/scheduler/` | Scheduled collector/analyzer jobs. |
 | `pipeline/export/` | CSV/XLSX export helpers. |
 | `db/` | MongoDB init, indexes, seed keywords, legacy SQL notes. |

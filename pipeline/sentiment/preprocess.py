@@ -1,12 +1,7 @@
-from __future__ import annotations
-import re
+# Re-export from the comprehensive preprocessing module
+# Kept for backward compatibility — classifier.py imports clean_text from here
+from functools import partial
+from pipeline.sentiment.preprocessing import preprocess  # noqa: F401
 
-SLANG = {"gk": "tidak", "ga": "tidak", "nggak": "tidak", "lemot": "lambat"}
-
-
-def clean_text(text: str) -> str:
-    text = text.lower()
-    text = re.sub(r"https?://\S+", " ", text)
-    text = re.sub(r"[^a-z0-9@#_\s]", " ", text)
-    words = [SLANG.get(word, word) for word in text.split()]
-    return " ".join(words)
+# clean_text(text) → preprocess(text, mode="rule_based")
+clean_text = partial(preprocess, mode="rule_based")

@@ -83,7 +83,7 @@ Reasons:
 apps/api/app/                 FastAPI application
 pipeline/collector/           adapters, normalization, dedupe, backfill runner
 pipeline/storage/             MongoDB persistence for all 14 collections
-pipeline/sentiment/           preprocessing, rules, classifier hooks
+pipeline/sentiment/           preprocessing (Indonesian cleaning, slang normalization, stopwords, stemming), rules, classifier, IndoBERT tokenizer + model wrapper
 pipeline/scheduler/           APScheduler jobs
 pipeline/export/              CSV/XLSX export
 db/                           Mongo init, indexes, seed data
