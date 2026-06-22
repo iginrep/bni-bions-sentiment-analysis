@@ -150,8 +150,8 @@ Sentiment analysis run metadata. One row per run.
 ```txt
 _id                ObjectId
 status             string       "running" | "completed" | "error"
-method             string       "rule_based" | future model names
-modelVersion       string       "rules-v0.1" | version string
+method             string       "indobert" | "openrouter"
+modelVersion       string       model version string
 totalItems         int          items to process
 processedItems     int          successfully classified
 errorItems         int          failed classifications
@@ -253,7 +253,7 @@ Active model registry.
 
 ```txt
 _id                ObjectId
-method             string       "rule_based" | future methods
+method             string       "indobert" | "openrouter"
 version            string       version identifier
 isActive           bool         currently active model
 createdAt          datetime

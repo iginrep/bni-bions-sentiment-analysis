@@ -43,8 +43,8 @@ def persist_sentiment_result(
         "score": result.get("score", 0.0),
         "confidence": result.get("confidence", 0.0),
         "topics": result.get("topics", []),
-        "method": result.get("method", "rule_based"),
-        "modelVersion": result.get("model_version", "rules-v0.1"),
+        "method": result.get("method", "indobert"),
+        "modelVersion": result.get("model_version", "intanm/indonesian_financial_sentiment_analysis"),
         "cleanedText": result.get("cleaned_text", ""),
         "createdAt": datetime.now(timezone.utc),
     }
@@ -98,8 +98,8 @@ def persist_sentiment_batch(
             "score": result.get("score", 0.0),
             "confidence": result.get("confidence", 0.0),
             "topics": result.get("topics", []),
-            "method": result.get("method", "rule_based"),
-            "modelVersion": result.get("model_version", "rules-v0.1"),
+            "method": result.get("method", "indobert"),
+            "modelVersion": result.get("model_version", "intanm/indonesian_financial_sentiment_analysis"),
             "cleanedText": result.get("cleaned_text", ""),
             "createdAt": now,
         }

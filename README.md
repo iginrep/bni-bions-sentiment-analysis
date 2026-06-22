@@ -116,7 +116,7 @@ Default runtime settings are currently defined in `apps/api/app/config.py`:
 
 ```txt
 APP_TIMEZONE=Asia/Jakarta
-SENTIMENT_METHOD=rule_based
+SENTIMENT_METHOD=indobert
 MONGODB_URI=mongodb://localhost:27017
 MONGODB_DATABASE=bni_bions_sentiment
 ```

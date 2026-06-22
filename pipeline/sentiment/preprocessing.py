@@ -3,9 +3,7 @@ from __future__ import annotations
 """
 Comprehensive Indonesian text preprocessing for BNI/BIONS sentiment analysis.
 
-Two modes:
-  - rule_based: full pipeline (clean → normalize → stopwords → stemming)
-  - indobert: lighter pipeline (clean → normalize → tokenizer handles the rest)
+Pipeline: clean → normalize → tokenizer handles the rest.
 
 Libraries used (no hardcoded lists):
   - indoNLP: slang normalization (3300+ entries), word elongation, HTML/URL removal
@@ -232,29 +230,26 @@ def stem_indonesian(text: str) -> str:
 # 6. FULL PIPELINES
 # ---------------------------------------------------------------------------
 
-PipelineMode = Literal["rule_based", "indobert"]
+PipelineMode = Literal["indobert"]
 
 
 def preprocess(
     text: str,
-    mode: PipelineMode = "rule_based",
+    mode: PipelineMode = "indobert",
     *,
     remove_nums: bool = False,
     do_stemming: bool = True,
     do_stopwords: bool = True,
     extra_keep_words: set[str] | None = None,
 ) -> str:
-    """Full preprocessing pipeline.
-
-    mode="rule_based":  clean → normalize → stopwords (NLTK) → stemming (Sastrawi)
-    mode="indobert":    clean → normalize only (tokenizer handles the rest)
-
+    """Full preprocessing pipeline (mode=indobert): clean and normalize only.
+    IndoBERT tokenizer handles tokenization, stopwords, subwords.
     Args:
         text: raw input text
-        mode: "rule_based" for classical NLP, "indobert" for transformer input
+        mode: "indobert" for transformer input
         remove_nums: whether to strip numbers
-        do_stemming: whether to apply Sastrawi stemmer (rule_based only)
-        do_stopwords: whether to remove stopwords (rule_based only, NLTK-backed)
+        do_stemming: whether to apply Sastrawi stemmer (deprecated)
+        do_stopwords: whether to remove stopwords (deprecated)
         extra_keep_words: additional words to preserve from stopword removal
     """
     if not text or not text.strip():
@@ -283,16 +278,11 @@ def preprocess(
     text = normalize_slang(text)
 
     # --- Stage 3: Mode-specific ---
+    # --- Stage 3: Mode-specific ---
     if mode == "indobert":
         # IndoBERT tokenizer handles tokenization, stopwords, subwords.
         # Only cleaning + slang normalization is needed.
         return normalize_whitespace(text)
-
-    # rule_based mode
-    if do_stopwords:
-        text = remove_stopwords(text, extra_keep=extra_keep_words)
-    if do_stemming:
-        text = stem_indonesian(text)
     return normalize_whitespace(text)
 
 
@@ -303,7 +293,7 @@ def preprocess(
 
 def preprocess_batch(
     texts: list[str],
-    mode: PipelineMode = "rule_based",
+    mode: PipelineMode = "indobert",
     **kwargs,
 ) -> list[str]:
     """Preprocess a list of texts. Applies stemmer lazily (once)."""
@@ -311,7 +301,7 @@ def preprocess_batch(
 
 
 # ---------------------------------------------------------------------------
-# 8. FEATURE EXTRACTION (for rule-based / classical models)
+# 8. FEATURE EXTRACTION (for NLP models)
 # ---------------------------------------------------------------------------
 
 

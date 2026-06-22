@@ -1,34 +1,31 @@
 from __future__ import annotations
 
 """
-Sentiment classifier — supports rule-based and IndoBERT modes.
+Sentiment classifier — supports IndoBERT and OpenRouter generative AI modes.
 
 Usage:
     from pipeline.sentiment.classifier import classify
 
-    # rule-based (default, fast, no GPU needed)
+    # IndoBERT (default, needs torch)
     result = classify("aplikasi ini bagus")
 
-    # IndoBERT (slower, needs torch, higher accuracy)
-    result = classify("aplikasi ini bagus", method="indobert")
+    # OpenRouter generative AI (needs OPENROUTER_API_KEY)
+    result = classify("aplikasi ini bagus", method="openrouter")
 
 Environment variables:
     INDOBERT_MODEL_NAME: HuggingFace model ID (default: intanm/indonesian_financial_sentiment_analysis)
+    OPENROUTER_API_KEY: API key for OpenRouter generative AI (optional)
+    OPENROUTER_MODEL: Model ID for OpenRouter (default: google/gemini-2.0-flash-001)
 """
 
 import os
-from pipeline.sentiment.preprocess import clean_text
 from pipeline.sentiment.preprocessing import preprocess
-from pipeline.sentiment.rules import classify_rule_based
-
-MODEL_VERSION_RULES = "rules-v0.1"
 
 # Default: Indonesian financial sentiment model (fine-tuned, 3-label)
-# Alternatives tested:
-#   - indobenchmark/indobert-base-p1 → base encoder, NO classification head, random labels
-#   - ShinyQ/indobert-sentiment-analysis-indonesian-university-reviews → wrong domain, over-neutral
-#   - intanm/indonesian_financial_sentiment_analysis → financial domain, NEGATIVE/NEUTRAL/POSITIVE ✓
 DEFAULT_MODEL = "intanm/indonesian_financial_sentiment_analysis"
+
+# OpenRouter defaults
+DEFAULT_OPENROUTER_MODEL = "google/gemini-2.0-flash-001"
 
 # Lazy-loaded IndoBERT components
 _indobert_tokenizer = None
@@ -89,12 +86,11 @@ def _classify_indobert(text: str) -> dict:
     confidence = probs[pred_idx].item()
 
     # Score: pos - neg, range [-1, 1]
-    # Find pos/neg indices by label name
     neg_idx = next((i for i, l in id2label.items() if "neg" in l.lower()), 0)
     pos_idx = next((i for i, l in id2label.items() if "pos" in l.lower()), num_labels - 1)
     score = probs[pos_idx].item() - probs[neg_idx].item()
 
-    # Topic detection (reuse rule-based topic rules)
+    # Topic detection (keyword-based, not sentiment)
     from pipeline.sentiment.rules import TOPIC_RULES
     tokens = set(cleaned.split())
     topics = [name for name, words in TOPIC_RULES.items() if tokens & words]
@@ -107,28 +103,96 @@ def _classify_indobert(text: str) -> dict:
     }
 
 
-def classify(text: str, method: str = "rule_based") -> dict:
+def _classify_openrouter(text: str) -> dict:
+    """Classify using OpenRouter generative AI. Returns label, score, confidence, topics."""
+    import json
+    import urllib.request
+    import urllib.error
+
+    api_key = os.environ.get("OPENROUTER_API_KEY")
+    if not api_key:
+        raise ValueError("OPENROUTER_API_KEY environment variable not set")
+
+    model = os.environ.get("OPENROUTER_MODEL", DEFAULT_OPENROUTER_MODEL)
+    cleaned = preprocess(text, mode="indobert")
+
+    prompt = f"""Classify the sentiment of this Indonesian financial text. Return ONLY a JSON object with these fields:
+- "label": one of "positive", "negative", "neutral"
+- "score": float from -1.0 (very negative) to 1.0 (very positive), 0.0 for neutral
+- "confidence": float from 0.0 to 1.0
+- "topics": list of topic strings from: login_otp, order_execution, app_stability, performance_speed, customer_service, fees_commission
+
+Text: {cleaned}
+
+JSON:"""
+
+    payload = json.dumps({
+        "model": model,
+        "messages": [{"role": "user", "content": prompt}],
+        "temperature": 0.1,
+        "max_tokens": 200,
+    }).encode("utf-8")
+
+    req = urllib.request.Request(
+        "https://openrouter.ai/api/v1/chat/completions",
+        data=payload,
+        headers={
+            "Authorization": f"Bearer {api_key}",
+            "Content-Type": "application/json",
+        },
+    )
+
+    try:
+        with urllib.request.urlopen(req, timeout=30) as resp:
+            data = json.loads(resp.read().decode("utf-8"))
+    except urllib.error.HTTPError as e:
+        raise RuntimeError(f"OpenRouter API error: {e.code} {e.read().decode()}")
+
+    content = data["choices"][0]["message"]["content"].strip()
+
+    # Parse JSON from response (handle markdown code blocks)
+    if content.startswith("```"):
+        content = content.split("```")[1]
+        if content.startswith("json"):
+            content = content[4:]
+        content = content.strip()
+
+    result = json.loads(content)
+
+    # Validate fields
+    label = result.get("label", "neutral")
+    if label not in ("positive", "negative", "neutral"):
+        label = "neutral"
+
+    return {
+        "label": label,
+        "score": round(float(result.get("score", 0.0)), 4),
+        "confidence": round(float(result.get("confidence", 0.5)), 4),
+        "topics": result.get("topics", []),
+        "cleaned_text": cleaned,
+        "method": "openrouter",
+        "model_version": model,
+    }
+
+
+def classify(text: str, method: str = "indobert") -> dict:
     """Classify sentiment of Indonesian text.
 
     Args:
         text: raw input text
-        method: "rule_based" (fast) or "indobert" (accurate, needs torch)
+        method: "indobert" (default, needs torch) or "openrouter" (needs OPENROUTER_API_KEY)
 
     Returns:
         dict with: label, score, confidence, topics, cleaned_text, method, model_version
     """
-    if method == "indobert":
+    if method == "openrouter":
+        result = _classify_openrouter(text)
+    else:
         model_name = os.environ.get("INDOBERT_MODEL_NAME", DEFAULT_MODEL)
         result = _classify_indobert(text)
         result["method"] = "indobert"
         result["model_version"] = model_name
         result["cleaned_text"] = preprocess(text, mode="indobert")
-    else:
-        cleaned = clean_text(text)
-        result = classify_rule_based(cleaned)
-        result["cleaned_text"] = cleaned
-        result["method"] = "rule_based"
-        result["model_version"] = MODEL_VERSION_RULES
 
     # Log model version
     try:

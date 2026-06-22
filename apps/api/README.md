@@ -38,7 +38,7 @@ Current defaults:
 
 ```txt
 app_timezone=Asia/Jakarta
-sentiment_method=rule_based
+sentiment_method=indobert
 mongodb_uri=mongodb://localhost:27017
 mongodb_database=bni_bions_sentiment
 ```
@@ -48,7 +48,7 @@ Future env loading should preserve these names:
 ```env
 MONGODB_URI=mongodb://localhost:27017
 MONGODB_DATABASE=bni_bions_sentiment
-SENTIMENT_METHOD=rule_based
+SENTIMENT_METHOD=indobert
 APP_TIMEZONE=Asia/Jakarta
 ```
 
