@@ -14,7 +14,7 @@ def _mongodb_database() -> str:
 
 class Settings(BaseModel):
     app_timezone: str = Field(default_factory=lambda: _env("APP_TIMEZONE", "Asia/Jakarta"))
-    sentiment_method: str = Field(default_factory=lambda: _env("SENTIMENT_METHOD", "indobert"))
+    sentiment_method: str = Field(default_factory=lambda: _env("SENTIMENT_METHOD", "openrouter"))
     mongodb_uri: str = Field(default_factory=lambda: _env("MONGODB_URI", "mongodb://localhost:27017"))
     mongodb_database: str = Field(default_factory=_mongodb_database)
 

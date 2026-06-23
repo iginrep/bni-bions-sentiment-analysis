@@ -150,7 +150,7 @@ Sentiment analysis run metadata. One row per run.
 ```txt
 _id                ObjectId
 status             string       "running" | "completed" | "error"
-method             string       "indobert" | "openrouter"
+method             string       "model" | "openrouter"
 modelVersion       string       model version string
 totalItems         int          items to process
 processedItems     int          successfully classified
@@ -253,7 +253,7 @@ Active model registry.
 
 ```txt
 _id                ObjectId
-method             string       "indobert" | "openrouter"
+method             string       "model" | "openrouter"
 version            string       version identifier
 isActive           bool         currently active model
 createdAt          datetime

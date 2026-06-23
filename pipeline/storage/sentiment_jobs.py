@@ -15,8 +15,8 @@ def _collection() -> Collection:
 
 
 def start_job(
-    method: str = "indobert",
-    model_version: str = "intanm/indonesian_financial_sentiment_analysis",
+    method: str = "model",
+    model_version: str = "indobenchmark/indobert-base-p2",
     *,
     total_items: int = 0,
 ) -> str:

@@ -7,7 +7,7 @@ router = APIRouter()
 
 class SentimentRequest(BaseModel):
     text: str
-    method: str = "indobert"
+    method: str = "model"
 
 
 @router.post("/classify")

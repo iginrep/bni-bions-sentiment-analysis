@@ -230,23 +230,23 @@ def stem_indonesian(text: str) -> str:
 # 6. FULL PIPELINES
 # ---------------------------------------------------------------------------
 
-PipelineMode = Literal["indobert"]
+PipelineMode = Literal["model"]
 
 
 def preprocess(
     text: str,
-    mode: PipelineMode = "indobert",
+    mode: PipelineMode = "model",
     *,
     remove_nums: bool = False,
     do_stemming: bool = True,
     do_stopwords: bool = True,
     extra_keep_words: set[str] | None = None,
 ) -> str:
-    """Full preprocessing pipeline (mode=indobert): clean and normalize only.
-    IndoBERT tokenizer handles tokenization, stopwords, subwords.
+    """Full preprocessing pipeline (mode=model): clean and normalize only.
+    model tokenizer handles tokenization, stopwords, subwords.
     Args:
         text: raw input text
-        mode: "indobert" for transformer input
+        mode: "model" for transformer input
         remove_nums: whether to strip numbers
         do_stemming: whether to apply Sastrawi stemmer (deprecated)
         do_stopwords: whether to remove stopwords (deprecated)
@@ -279,8 +279,8 @@ def preprocess(
 
     # --- Stage 3: Mode-specific ---
     # --- Stage 3: Mode-specific ---
-    if mode == "indobert":
-        # IndoBERT tokenizer handles tokenization, stopwords, subwords.
+    if mode == "model":
+        # model tokenizer handles tokenization, stopwords, subwords.
         # Only cleaning + slang normalization is needed.
         return normalize_whitespace(text)
     return normalize_whitespace(text)
@@ -293,7 +293,7 @@ def preprocess(
 
 def preprocess_batch(
     texts: list[str],
-    mode: PipelineMode = "indobert",
+    mode: PipelineMode = "model",
     **kwargs,
 ) -> list[str]:
     """Preprocess a list of texts. Applies stemmer lazily (once)."""

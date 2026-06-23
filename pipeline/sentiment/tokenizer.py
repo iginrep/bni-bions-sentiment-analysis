@@ -1,19 +1,19 @@
 from __future__ import annotations
 
 """
-IndoBERT tokenizer wrapper.
+model tokenizer wrapper.
 
 Handles text preprocessing → WordPiece tokenization → model-ready tensors.
 
-IndoBERT model: indobenchmark/indobert-base-p1
+model: indobenchmark/indobert-base-p1
   - vocab size: 30522 (WordPiece)
   - max seq len: 512
   - tokens: [CLS] text [SEP] [PAD]
 
 Usage:
-    from pipeline.sentiment.tokenizer import IndoBertTokenizer
+    from pipeline.sentiment.tokenizer import ModelTokenizer
 
-    tok = IndoBertTokenizer()
+    tok = ModelTokenizer()
     encoded = tok.encode("aplikasi ini bagus sekali")
     # → {"input_ids": [...], "attention_mask": [...], "token_type_ids": [...]}
 
@@ -25,13 +25,13 @@ from typing import Any
 
 from pipeline.sentiment.preprocessing import preprocess
 
-# Default model — indobenchmark/indobert-base-p1 is the standard IndoBERT
+# Default model — indobenchmark/indobert-base-p1 is the standard model
 DEFAULT_MODEL = "indobenchmark/indobert-base-p1"
 MAX_LENGTH = 512
 
 
-class IndoBertTokenizer:
-    """Lazy-loading IndoBERT tokenizer with preprocessing."""
+class ModelTokenizer:
+    """Lazy-loading model tokenizer with preprocessing."""
 
     def __init__(
         self,
@@ -57,10 +57,10 @@ class IndoBertTokenizer:
     def preprocess_text(self, text: str) -> str:
         """Apply Indonesian-specific preprocessing before tokenization.
 
-        Uses indobert mode: clean + normalize, no stopword/stemming removal
+        Uses model mode: clean + normalize, no stopword/stemming removal
         (the model's pre-trained vocabulary handles subword segmentation).
         """
-        return preprocess(text, mode="indobert")
+        return preprocess(text, mode="model")
 
     def encode(
         self,
@@ -138,4 +138,4 @@ class IndoBertTokenizer:
 
     def __repr__(self) -> str:
         loaded = "loaded" if self._tokenizer else "lazy"
-        return f"IndoBertTokenizer(model={self.model_name}, max_len={self.max_length}, {loaded})"
+        return f"ModelTokenizer(model={self.model_name}, max_len={self.max_length}, {loaded})"

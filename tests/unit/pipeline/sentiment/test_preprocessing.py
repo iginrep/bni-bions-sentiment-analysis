@@ -208,30 +208,30 @@ class TestStemIndonesian:
         assert "baca" in result
 
 
-# --- Full pipeline tests (indobert mode — no stemming) ---
+# --- Full pipeline tests (model mode — no stemming) ---
 
 class TestPreprocessIndobert:
     def test_basic(self):
-        result = preprocess("Ini aplikasi yang bagus", mode="indobert")
+        result = preprocess("Ini aplikasi yang bagus", mode="model")
         assert "aplikasi" in result
         assert "bagus" in result
 
     def test_empty(self):
-        assert preprocess("", mode="indobert") == ""
+        assert preprocess("", mode="model") == ""
 
     def test_no_stemming(self):
-        result = preprocess("berlari ke sana", mode="indobert")
-        # no stemming in indobert mode
+        result = preprocess("berlari ke sana", mode="model")
+        # no stemming in model mode
         assert "berlari" in result
 
     def test_slang_normalized(self):
-        result = preprocess("gk bisa", mode="indobert")
+        result = preprocess("gk bisa", mode="model")
         assert "enggak" in result
 
     def test_stopwords_not_removed(self):
-        """indobert mode keeps stopwords (model handles them)."""
-        result = preprocess("ini adalah aplikasi yang bagus", mode="indobert")
-        # indobert mode doesn't remove stopwords
+        """model mode keeps stopwords (model handles them)."""
+        result = preprocess("ini adalah aplikasi yang bagus", mode="model")
+        # model mode doesn't remove stopwords
         assert "adalah" in result or "aplikasi" in result
 
 

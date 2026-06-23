@@ -8,7 +8,7 @@ Transform cleaned Indonesian app/social text into sentiment labels and topic sig
 
 Current classifier: rule-based.
 
-Future path: labeled-data evaluation, then IndoBERT or another Indonesian model if the rule-based approach is not enough.
+Future path: labeled-data evaluation, then model or another Indonesian model if the rule-based approach is not enough.
 
 ## Files
 
@@ -18,7 +18,7 @@ Future path: labeled-data evaluation, then IndoBERT or another Indonesian model 
 | `rules.py` | Rule-based positive/neutral/negative classification. |
 | `classifier.py` | Public classifier function. |
 | `topics.py` | Topic/category helpers. |
-| `model_indobert.py` | Placeholder/future model integration. |
+| `model.py` | Placeholder/future model integration. |
 | `run.py` | CLI-style sample runner. |
 
 ## Labels

@@ -55,8 +55,8 @@ Core modules:
 | `apps/api/` | FastAPI service for health, comments, sentiment, exports, keywords, schedules. |
 | `apps/dashboard/` | Next.js dashboard scaffold. |
 | `pipeline/collector/` | Platform adapters, canonical data model, normalization, dedupe, backfill runner. |
-| `pipeline/storage/` | MongoDB persistence — all 14 collections (social_items, sentiment_results, collection_runs, sentiment_jobs, checkpoints, providers, keywords, schedules, exports, dashboard, labeled_examples, model_versions, system_events). |
-| `pipeline/sentiment/` | Indonesian text preprocessing (cleaning, slang normalization, stopwords, stemming), rule-based classifier, IndoBERT tokenizer + model wrapper. |
+| `pipeline/storage/` | MongoDB persistence — canonical, raw, processed, labeled, sentiment, run, export, dashboard, model registry collections. |
+| `pipeline/sentiment/` | Indonesian text preprocessing, topic tagging, quality flags, model/OpenRouter sentiment classification. |
 | `pipeline/scheduler/` | Scheduled collector/analyzer jobs. |
 | `pipeline/export/` | CSV/XLSX export helpers. |
 | `db/` | MongoDB init, indexes, seed keywords, legacy SQL notes. |
@@ -97,6 +97,9 @@ Equivalent direct commands:
 python3 -m pipeline.collector.run
 python3 -m pipeline.collector.backfill
 python3 -c "from pipeline.sentiment.run import backfill_sentiment; print(backfill_sentiment())"
+python3 -c "from pipeline.sentiment.run import backfill_sentiment; print(backfill_sentiment(reprocess=True))"  # re-run all analyzable items
+python3 -c "from pipeline.storage.datasets import build_dataset_layers; print(build_dataset_layers())"  # raw + processed training layers
+python3 -c "from pipeline.storage.datasets import export_training_jsonl; print(export_training_jsonl())"  # labeled training JSONL
 python3 -m pipeline.sentiment.run
 python3 -m pipeline.export.csv_export
 python3 -m uvicorn apps.api.app.main:app --reload
@@ -116,7 +119,11 @@ Default runtime settings are currently defined in `apps/api/app/config.py`:
 
 ```txt
 APP_TIMEZONE=Asia/Jakarta
-SENTIMENT_METHOD=indobert
+SENTIMENT_METHOD=openrouter
+OPENROUTER_MODEL=openrouter/free
+OPENROUTER_BATCH_SIZE=5
+OPENROUTER_BATCH_DELAY_SECONDS=2
+MODEL_NAME=indobenchmark/indobert-base-p2
 MONGODB_URI=mongodb://localhost:27017
 MONGODB_DATABASE=bni_bions_sentiment
 ```
@@ -152,6 +159,7 @@ apple_app_store:
 youtube:
   max_comments_per_run: 200
   max_videos_per_run: 50
+  relevance_filter: "enabled: keeps BIONS/sekuritas/saham/trading/RDN/app comments; drops spam/off-topic comments"
   daily_quota_budget_units: 500
 ```
 
@@ -236,11 +244,37 @@ Before commit, scan staged diff for accidental secrets:
 git diff --staged | grep -Ei 'password|secret|api[_-]?key|token|cookie|authorization|bearer' || true
 ```
 
+## OpenRouter sentiment + topic labels
+
+OpenRouter labels sentiment and BIONS topics in one batch call. Default batch size is 5 items for the free OpenRouter pool. That keeps responses fast, preserves JSON/id alignment, lowers truncation/topic drift risk, and reduces rate-limit pressure with a 2s inter-batch delay. Larger requested batch sizes are clamped to 5.
+
+Allowed topics are the canonical 8: `app_experience`, `trading_execution`, `account_kyc`, `fees_pricing`, `market_data_features`, `customer_service`, `trust_reliability`, `competition_comparison`.
+
+Rating remains context only. OpenRouter prompt explicitly forbids `1★ -> negative` unless text supports it.
+
+## Training data best practice
+
+Use text-first labels.
+
+- `raw_social_items`: original source payload snapshot for reproducible reprocessing.
+- `processed_social_items`: normalized text, tokens/features, model label, quality flags.
+- `labeled_examples`: human labels for training/eval. `ratingContext` is context only, not label truth.
+
+Rating policy: 1★ or 5★ never overrides sentiment. If rating conflicts with text/model output, mark `needsReview`; human label decides final training label.
+
+Recommended loop:
+
+1. Recompute stale sentiment: `backfill_sentiment(reprocess=True)`.
+2. Build raw/processed layers: `build_dataset_layers()`.
+3. Label only `quality.needsReview=true` + balanced samples first.
+4. Export `data/training/bions_sentiment.jsonl`.
+5. Train/evaluate with fixed train/validation/test split.
+
 ## Current limitations
 
 - Backfill works for Google Play, App Store, and YouTube. X/Instagram/Threads/TikTok/Stockbit require historical adapter implementation.
 - Risky social sources are intentionally disabled for live collection.
-- Sentiment is currently rule-based and should be improved with labeled Indonesian finance/app-review examples.
+- Sentiment uses model/OpenRouter only. YouTube spam/off-topic comments are excluded before analysis; rating-aware QA flags mark suspicious 1★/5★ sentiment mismatches for review.
 - `db/schema.sql` and `db/seed_keywords.sql` are legacy SQL references while the active database target is MongoDB.
 
 ## License

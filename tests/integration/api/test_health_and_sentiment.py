@@ -15,7 +15,7 @@ def test_health_endpoint(api_client: TestClient):
 
 @pytest.mark.skipif(
     not pytest.importorskip("torch", reason="torch not installed"),
-    reason="IndoBERT requires torch",
+    reason="model requires torch",
 )
 def test_sentiment_classify_endpoint_returns_valid_label(api_client: TestClient):
     response = api_client.post("/sentiment/classify", json={"text": "BIONS error login gagal"})
@@ -24,4 +24,4 @@ def test_sentiment_classify_endpoint_returns_valid_label(api_client: TestClient)
     data = response.json()
     assert data["label"] in ("positive", "negative", "neutral")
     assert isinstance(data["score"], (int, float))
-    assert data["method"] == "indobert"
+    assert data["method"] == "model"

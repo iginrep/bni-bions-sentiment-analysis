@@ -26,7 +26,7 @@ risky_collectors = [
   "twscrape>=0.15",
   "TikTokApi>=6.5"
 ]
-indobert = [
+model = [
   "torch>=2.0",
   "transformers>=4.30",
   "Sastrawi>=202311.2",

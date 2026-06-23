@@ -11,7 +11,7 @@ The pipeline collects public feedback, converts platform-specific payloads into 
 | Path | Purpose |
 | --- | --- |
 | `collector/` | Platform adapters, canonical item model, normalization, dedupe, sample collector runner. |
-| `sentiment/` | Text preprocessing, rule-based classifier, topic helpers, future IndoBERT hook. |
+| `sentiment/` | Text preprocessing, rule-based classifier, topic helpers, future model hook. |
 | `scheduler/` | APScheduler job definitions and runner. |
 | `export/` | CSV and Excel export helpers. |
 
