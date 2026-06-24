@@ -38,7 +38,30 @@ def _utc(value: datetime) -> datetime:
     return value.astimezone(timezone.utc)
 
 
-def parse_app_store_reviews(payload: dict[str, Any], keyword: str, target_entity: str) -> list[RawSocialItem]:
+def _clean_itunes_urls(val: Any, app_id: str | None = None, country: str | None = None) -> Any:
+    if isinstance(val, dict):
+        return {k: _clean_itunes_urls(v, app_id, country) for k, v in val.items()}
+    if isinstance(val, list):
+        return [_clean_itunes_urls(v, app_id, country) for v in val]
+    if isinstance(val, str):
+        if "itunes.apple.com" in val:
+            if "review?id=" in val:
+                c = country or "id"
+                a = app_id or "6736508566"
+                if a == "6736508566":
+                    return f"https://apps.apple.com/{c}/app/bions/id{a}"
+                return f"https://apps.apple.com/{c}/app/id{a}"
+            return val.replace("itunes.apple.com", "apps.apple.com")
+    return val
+
+
+def parse_app_store_reviews(
+    payload: dict[str, Any],
+    keyword: str,
+    target_entity: str,
+    app_id: str | None = None,
+    country: str | None = None,
+) -> list[RawSocialItem]:
     entries = payload.get("feed", {}).get("entry", [])
     if isinstance(entries, dict):
         entries = [entries]
@@ -60,12 +83,18 @@ def parse_app_store_reviews(payload: dict[str, Any], keyword: str, target_entity
         rating_raw = _label(entry, "im:rating")
         version = _label(entry, "im:version")
         updated = _label(entry, "updated")
-        link = entry.get("link", {})
         source_url = None
-        if isinstance(link, dict):
-            attrs = link.get("attributes", {})
-            if isinstance(attrs, dict):
-                source_url = attrs.get("href")
+        if app_id and country:
+            if app_id == "6736508566":
+                source_url = f"https://apps.apple.com/{country}/app/bions/id{app_id}"
+            else:
+                source_url = f"https://apps.apple.com/{country}/app/id{app_id}"
+        else:
+            link = entry.get("link", {})
+            if isinstance(link, dict):
+                attrs = link.get("attributes", {})
+                if isinstance(attrs, dict):
+                    source_url = attrs.get("href")
 
         metrics: dict[str, Any] = {}
         if rating_raw is not None:
@@ -74,7 +103,7 @@ def parse_app_store_reviews(payload: dict[str, Any], keyword: str, target_entity
             except ValueError:
                 metrics["rating"] = rating_raw
 
-        raw_payload = dict(entry)
+        raw_payload = _clean_itunes_urls(dict(entry), app_id, country)
         if version is not None:
             raw_payload["app_version"] = version
 
@@ -129,7 +158,13 @@ class AppStoreAdapter:
         while len(items) < limit and page <= 10:
             response = httpx.get(self.review_feed_url(page), timeout=self.timeout)
             response.raise_for_status()
-            page_items = parse_app_store_reviews(response.json(), keyword=keyword, target_entity=target_entity)
+            page_items = parse_app_store_reviews(
+                response.json(),
+                keyword=keyword,
+                target_entity=target_entity,
+                app_id=self.app_id,
+                country=self.country,
+            )
             if not page_items:
                 break
             items.extend(page_items)
@@ -155,7 +190,13 @@ class AppStoreAdapter:
         while len(items) < limit and page <= 10:
             response = httpx.get(self.review_feed_url(page), timeout=self.timeout)
             response.raise_for_status()
-            page_items = parse_app_store_reviews(response.json(), keyword=keyword, target_entity=target_entity)
+            page_items = parse_app_store_reviews(
+                response.json(),
+                keyword=keyword,
+                target_entity=target_entity,
+                app_id=self.app_id,
+                country=self.country,
+            )
             if not page_items:
                 break
 

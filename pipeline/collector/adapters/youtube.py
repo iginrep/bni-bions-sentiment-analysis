@@ -189,11 +189,19 @@ class YouTubeAdapter:
         sleep_fn: Callable[[float], None] | None = None,
     ) -> None:
         self.channel_urls = list(channel_urls or DEFAULT_CHANNEL_URLS)
-        self.client = client or httpx.Client(timeout=20.0, follow_redirects=True, headers={"User-Agent": "Mozilla/5.0 BNI-BIONS-sentiment-monitor/0.1"})
+        self.client = client or httpx.Client(
+            timeout=20.0,
+            follow_redirects=True,
+            headers={
+                "User-Agent": "Mozilla/5.0 BNI-BIONS-sentiment-monitor/0.1",
+                "Accept-Encoding": "gzip, deflate",
+            },
+        )
         self.max_backfill_requests = max_backfill_requests if max_backfill_requests is not None else int(_load_env_value("YOUTUBE_BACKFILL_MAX_REQUESTS") or "20")
         self.request_delay_seconds = request_delay_seconds if request_delay_seconds is not None else float(_load_env_value("YOUTUBE_BACKFILL_REQUEST_DELAY_SECONDS") or "1.0")
         self.sleep_fn = sleep_fn or time.sleep
         self._backfill_requests_used = 0
+        self._resolved_channel_ids: dict[str, str] = {}
 
     def _get_youtube_api(self, url: str, params: dict[str, str | int]) -> httpx.Response:
         if self._backfill_requests_used >= self.max_backfill_requests:
@@ -312,6 +320,13 @@ class YouTubeAdapter:
                 params["pageToken"] = page_token
             response = self._get_youtube_api(YOUTUBE_COMMENT_THREADS_URL, params=params)
             if response.status_code in {401, 403, 429}:
+                try:
+                    err_json = response.json()
+                    errors = err_json.get("error", {}).get("errors", [])
+                    if any(e.get("reason") == "commentsDisabled" for e in errors):
+                        return []
+                except Exception:
+                    pass
                 raise CollectorStopped(f"youtube comments stopped: status {response.status_code}")
             response.raise_for_status()
             payload = response.json()
@@ -325,8 +340,12 @@ class YouTubeAdapter:
         return items[:limit]
 
     def resolve_channel_id(self, channel_url: str) -> str:
+        if channel_url in self._resolved_channel_ids:
+            return self._resolved_channel_ids[channel_url]
         if "/channel/" in channel_url:
-            return channel_url.rstrip("/").rsplit("/", 1)[-1]
+            channel_id = channel_url.rstrip("/").rsplit("/", 1)[-1]
+            self._resolved_channel_ids[channel_url] = channel_id
+            return channel_id
         response = self.client.get(channel_url)
         if response.status_code in {401, 403, 429}:
             raise CollectorStopped(f"youtube channel resolve stopped: status {response.status_code}")
@@ -334,4 +353,6 @@ class YouTubeAdapter:
         match = re.search(r'"browseId":"(UC[^"]+)"', response.text)
         if not match:
             raise CollectorStopped(f"youtube channel id not found for {channel_url}")
-        return match.group(1)
+        channel_id = match.group(1)
+        self._resolved_channel_ids[channel_url] = channel_id
+        return channel_id

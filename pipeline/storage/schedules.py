@@ -30,3 +30,11 @@ def touch_schedule(schedule_id: str, *, status: str = "ok") -> None:
         {"_id": schedule_id},
         {"$set": {"lastRunAt": datetime.now(timezone.utc), "lastRunStatus": status}},
     )
+
+
+def toggle_schedule(schedule_id: str, is_active: bool) -> bool:
+    res = _collection().update_one(
+        {"_id": schedule_id},
+        {"$set": {"isActive": is_active, "updatedAt": datetime.now(timezone.utc)}}
+    )
+    return res.modified_count > 0

@@ -19,11 +19,19 @@ def main():
                 collect_and_analyze,
                 "cron",
                 id=str(schedule.get("_id")),
+                args=[str(schedule.get("_id"))],
                 hour=cron.get("hour", "8,18"),
                 minute=cron.get("minute", 0),
             )
     else:
-        scheduler.add_job(collect_and_analyze, "cron", hour="8,18", minute=0)
+        scheduler.add_job(
+            collect_and_analyze,
+            "cron",
+            id="sched_bions_daily_10am",
+            args=["sched_bions_daily_10am"],
+            hour=10,
+            minute=0
+        )
     scheduler.start()
 
 

@@ -65,6 +65,34 @@ def test_app_store_adapter_builds_country_feed_url():
     assert "id=6736508566" in adapter.review_feed_url(1)
 
 
+def test_parse_app_store_reviews_with_config():
+    payload = {
+        "feed": {
+            "entry": [
+                {
+                    "id": {"label": "review-1"},
+                    "title": {"label": "Sulit login"},
+                    "content": {"label": "Aplikasi BIONS susah login otp lambat"},
+                    "author": {"name": {"label": "user publik"}, "uri": {"label": "https://itunes.apple.com/id/reviews/id1608763018"}},
+                    "im:rating": {"label": "1"},
+                    "updated": {"label": "2026-06-01T10:00:00-07:00"},
+                    "link": {"attributes": {"href": "https://itunes.apple.com/id/review?id=6736508566&type=Purple%20Software"}},
+                }
+            ]
+        }
+    }
+    # For BIONS app ID
+    items = parse_app_store_reviews(payload, keyword="bions", target_entity="bions", app_id="6736508566", country="id")
+    assert items[0].source_url == "https://apps.apple.com/id/app/bions/id6736508566"
+    assert items[0].raw_payload["author"]["uri"]["label"] == "https://apps.apple.com/id/reviews/id1608763018"
+    assert items[0].raw_payload["link"]["attributes"]["href"] == "https://apps.apple.com/id/app/bions/id6736508566"
+
+    # For other app ID
+    items_other = parse_app_store_reviews(payload, keyword="other", target_entity="other", app_id="12345", country="us")
+    assert items_other[0].source_url == "https://apps.apple.com/us/app/id12345"
+    assert items_other[0].raw_payload["link"]["attributes"]["href"] == "https://apps.apple.com/us/app/id12345"
+
+
 def test_script_collectors_stop_without_required_runtime_config():
     adapters = [StockbitAdapter(), TwitterAdapter(), TikTokAdapter(), InstagramAdapter(), ThreadsAdapter()]
 

@@ -1,0 +1,121 @@
+@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap');
+
+:root {
+  --bg-primary: #080B11;
+  --bg-secondary: #0F131E;
+  --bg-card: rgba(20, 27, 45, 0.6);
+  --border-color: rgba(255, 255, 255, 0.05);
+  --text-primary: #F3F4F6;
+  --text-secondary: #9CA3AF;
+  
+  --color-positive: #10B981;
+  --color-positive-bg: rgba(16, 185, 129, 0.1);
+  --color-negative: #EF4444;
+  --color-negative-bg: rgba(239, 68, 68, 0.1);
+  --color-neutral: #6B7280;
+  --color-neutral-bg: rgba(107, 114, 128, 0.1);
+  
+  --accent-glow: radial-gradient(circle, rgba(99, 102, 241, 0.15) 0%, rgba(0, 0, 0, 0) 70%);
+  --font-family: 'Plus Jakarta Sans', 'Outfit', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  background-color: var(--bg-primary);
+  color: var(--text-primary);
+  font-family: var(--font-family);
+  min-height: 100vh;
+  overflow-x: hidden;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Custom Scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--bg-primary);
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.15);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.3);
+}
+
+/* Glassmorphism Classes */
+.glass-panel {
+  background: var(--bg-card);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid var(--border-color);
+  border-radius: 16px;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.glass-panel:hover {
+  border-color: rgba(255, 255, 255, 0.1);
+  box-shadow: 0 10px 30px -10px rgba(0, 0, 0, 0.5);
+}
+
+/* Badge classes */
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  border-radius: 20px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.badge-positive {
+  color: var(--color-positive);
+  background: var(--color-positive-bg);
+  border: 1px solid rgba(16, 185, 129, 0.2);
+}
+
+.badge-negative {
+  color: var(--color-negative);
+  background: var(--color-negative-bg);
+  border: 1px solid rgba(239, 68, 68, 0.2);
+}
+
+.badge-neutral {
+  color: #E2E8F0;
+  background: var(--color-neutral-bg);
+  border: 1px solid rgba(107, 114, 128, 0.2);
+}
+
+.badge-platform {
+  background: rgba(99, 102, 241, 0.1);
+  color: #A5B4FC;
+  border: 1px solid rgba(99, 102, 241, 0.2);
+}
+
+/* Animation utilities */
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.4; }
+}
+
+.pulse-dot {
+  width: 8px;
+  height: 8px;
+  background-color: var(--color-positive);
+  border-radius: 50%;
+  box-shadow: 0 0 8px var(--color-positive);
+  animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}

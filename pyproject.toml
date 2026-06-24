@@ -29,7 +29,7 @@ risky_collectors = [
 model = [
   "torch>=2.0",
   "transformers>=4.30",
-  "Sastrawi>=202311.2",
+  "Sastrawi>=1.0.1",
   "nltk>=3.8",
   "indoNLP>=0.3.4",
 ]

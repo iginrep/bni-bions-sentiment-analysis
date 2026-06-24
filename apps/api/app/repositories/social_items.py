@@ -24,7 +24,7 @@ def ensure_indexes() -> None:
     col.create_index([("sentiment.topics", ASCENDING), ("postedAt", DESCENDING)])
     col.create_index([("keywordId", ASCENDING), ("collectedAt", DESCENDING)])
     col.create_index([("content.contentHash", ASCENDING)])
-    col.create_index([("content.text", "text"), ("content.cleanedText", "text")])
+    col.create_index([("content.text", "text"), ("content.cleanedText", "text")], language_override="none")
 
 
 def upsert_social_item(item: dict[str, Any]) -> tuple[bool, str]:

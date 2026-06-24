@@ -163,6 +163,9 @@ if __name__ == "__main__":
     result = collect_sample(include_risky=True, return_report=True)
     items, report = result
     for item in items:
-        print(item.as_json())
+        try:
+            print(item.as_json())
+        except UnicodeEncodeError:
+            print(item.as_json().encode("ascii", "replace").decode("ascii"))
     if report:
         print(report)
