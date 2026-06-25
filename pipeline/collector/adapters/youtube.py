@@ -213,44 +213,71 @@ class YouTubeAdapter:
         return response
 
     def collect(self, keyword: str, target_entity: str, limit: int = 50) -> list[RawSocialItem]:
-        video_items: list[RawSocialItem] = []
+        api_key = _load_env_value("YOUTUBE_API_KEY")
+        
+        # If API key is not available, fallback to fetching videos from RSS feeds
+        if not api_key:
+            video_items: list[RawSocialItem] = []
+            for channel_url in self.channel_urls:
+                try:
+                    channel_id = self.resolve_channel_id(channel_url)
+                    response = self.client.get(YOUTUBE_RSS_URL.format(channel_id=channel_id))
+                    if response.status_code in {401, 403, 429}:
+                        raise CollectorStopped(f"youtube rss stopped: status {response.status_code}")
+                    response.raise_for_status()
+                    video_items.extend(parse_youtube_feed(response.text, keyword=keyword, target_entity=target_entity))
+                except Exception as e:
+                    print(f"Error fetching RSS for {channel_url}: {e}")
+            return video_items[:limit]
+
+        # If API key is available, fetch the latest comments across the entire channel directly
+        comments: list[RawSocialItem] = []
+        for channel_url in self.channel_urls:
+            try:
+                channel_id = self.resolve_channel_id(channel_url)
+                params = {
+                    "part": "snippet,replies",
+                    "allThreadsRelatedToChannelId": channel_id,
+                    "maxResults": min(limit, 100),
+                    "order": "time",
+                    "textFormat": "plainText",
+                    "key": api_key,
+                }
+                response = self._get_youtube_api(YOUTUBE_COMMENT_THREADS_URL, params=params)
+                if response.status_code in {401, 403, 429}:
+                    try:
+                        err_json = response.json()
+                        errors = err_json.get("error", {}).get("errors", [])
+                        if any(e.get("reason") == "commentsDisabled" for e in errors):
+                            continue
+                    except Exception:
+                        pass
+                    raise CollectorStopped(f"youtube comments stopped: status {response.status_code}")
+                response.raise_for_status()
+                payload = response.json()
+                channel_comments = parse_youtube_comment_threads(payload, keyword=keyword, target_entity=target_entity)
+                comments.extend(channel_comments)
+            except Exception as e:
+                print(f"Error collecting comments for channel {channel_url}: {e}")
+
+        # If we got comments, sort them by publication date descending and return
+        if comments:
+            tz_utc = timezone.utc
+            comments.sort(key=lambda x: x.posted_at or datetime.min.replace(tzinfo=tz_utc), reverse=True)
+            return comments[:limit]
+
+        # Fallback to videos if no comments were found
+        video_items = []
         for channel_url in self.channel_urls:
             try:
                 channel_id = self.resolve_channel_id(channel_url)
                 response = self.client.get(YOUTUBE_RSS_URL.format(channel_id=channel_id))
-                if response.status_code in {401, 403, 429}:
-                    raise CollectorStopped(f"youtube rss stopped: status {response.status_code}")
                 response.raise_for_status()
                 video_items.extend(parse_youtube_feed(response.text, keyword=keyword, target_entity=target_entity))
-            except Exception as e:
-                print(f"Error fetching RSS for {channel_url}: {e}")
-                continue
-
-        # Sort video items by publication date descending so we scan the newest videos first
-        tz_utc = timezone.utc
-        video_items.sort(key=lambda x: x.posted_at or datetime.min.replace(tzinfo=tz_utc), reverse=True)
-
-        api_key = _load_env_value("YOUTUBE_API_KEY")
-        if not api_key:
-            return video_items[:limit]
-
-        comments: list[RawSocialItem] = []
-        # Scan the newest 10 videos overall to ensure we check both channels' latest uploads
-        for video in video_items[:10]:
-            try:
-                # Fetch up to 15 comments per video so we don't skip other videos if one has comments
-                fetched_comments = self.collect_comments(
-                    video.source_id,
-                    keyword=keyword,
-                    target_entity=target_entity,
-                    limit=15,
-                    api_key=api_key
-                )
-                comments.extend(fetched_comments)
-            except Exception as e:
-                print(f"Error collecting comments for video {video.source_id}: {e}")
-
-        return comments[:limit] or video_items[:limit]
+            except Exception:
+                pass
+        video_items.sort(key=lambda x: x.posted_at or datetime.min.replace(tzinfo=timezone.utc), reverse=True)
+        return video_items[:limit]
 
     def collect_backfill(
         self,
