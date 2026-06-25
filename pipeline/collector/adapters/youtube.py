@@ -235,22 +235,20 @@ class YouTubeAdapter:
             return video_items[:limit]
 
         comments: list[RawSocialItem] = []
-        # Limit to checking the newest 10 videos overall to conserve API quota/budget
+        # Scan the newest 10 videos overall to ensure we check both channels' latest uploads
         for video in video_items[:10]:
             try:
+                # Fetch up to 15 comments per video so we don't skip other videos if one has comments
                 fetched_comments = self.collect_comments(
                     video.source_id,
                     keyword=keyword,
                     target_entity=target_entity,
-                    limit=max(1, limit - len(comments)),
+                    limit=15,
                     api_key=api_key
                 )
                 comments.extend(fetched_comments)
             except Exception as e:
                 print(f"Error collecting comments for video {video.source_id}: {e}")
-                
-            if len(comments) >= limit:
-                break
 
         return comments[:limit] or video_items[:limit]
 
