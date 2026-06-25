@@ -48,7 +48,7 @@ export default function Home() {
       setExtracting(false);
       if (res.status === "success") {
         setActionMessage({
-          text: `Sukses menarik data baru! Ditemukan ${res.count} ulasan baru.`,
+          text: `Sukses menarik data baru! Ditemukan ${res.count} ulasan baru yang berhasil disimpan.`,
           type: "success",
         });
         loadDashboardData();

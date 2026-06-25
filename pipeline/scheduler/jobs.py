@@ -14,12 +14,15 @@ def collect_and_analyze(schedule_id: str | None = None) -> dict[str, Any]:
             return {"status": "skipped"}
 
     print("[*] Scheduled Run: Memulai penarikan data (extraction)...")
+    persisted_count = 0
+    total_fetched = 0
     try:
-        collected = collect_sample(write=True)
-        print(f"[✓] Penarikan data selesai. Jumlah item ditarik: {len(collected)}")
+        collected, report = collect_sample(write=True, return_report=True)
+        persisted_count = report.get("persisted_count", 0)
+        total_fetched = len(collected)
+        print(f"[✓] Penarikan data selesai. Ulasan baru disimpan: {persisted_count} (total ditarik: {total_fetched})")
     except Exception as e:
         print(f"[X] Gagal melakukan penarikan data: {e}")
-        collected = []
 
     print("[*] Scheduled Run: Memulai pelabelan sentimen dengan Gemini...")
     try:
@@ -30,6 +33,7 @@ def collect_and_analyze(schedule_id: str | None = None) -> dict[str, Any]:
         summary = {}
 
     return {
-        "collected_count": len(collected),
+        "collected_count": persisted_count,
+        "total_fetched": total_fetched,
         "labeling_summary": summary
     }

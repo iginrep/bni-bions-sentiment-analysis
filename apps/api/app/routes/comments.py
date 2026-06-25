@@ -60,8 +60,9 @@ def trigger_extraction():
     from pipeline.collector.run import collect_sample
     try:
         # Run extraction
-        collected = collect_sample(write=True)
-        return {"status": "success", "count": len(collected)}
+        collected, report = collect_sample(write=True, return_report=True)
+        persisted_count = report.get("persisted_count", 0)
+        return {"status": "success", "count": persisted_count}
     except Exception as e:
         return {"status": "error", "message": str(e)}
 

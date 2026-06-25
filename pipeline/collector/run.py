@@ -130,29 +130,32 @@ def collect_sample(
                 pass
 
     deduped = dedupe_items(items)
+    persisted_count = 0
     if write:
         try:
             from pipeline.storage.social_items import persist_social_items
 
-            persist_social_items(deduped)
+            persisted_count = persist_social_items(deduped)
         except Exception:
             pass
 
     # finish collection run
     if run_id and finish_run:
         try:
-            total_collected = sum(r.get("count", 0) for r in report.values())
-            errors = [r["error"] for r in report.values() if r.get("error")]
+            total_collected = sum(r.get("count", 0) for r in report.values() if isinstance(r, dict))
+            errors = [r["error"] for r in report.values() if isinstance(r, dict) and r.get("error")]
             finish_run(
                 run_id,
                 status="completed" if not errors else "completed_with_errors",
                 collected_count=total_collected,
-                persisted_count=len(deduped) if write else 0,
+                persisted_count=persisted_count,
                 error_count=len(errors),
                 errors=errors or None,
             )
         except Exception:
             pass
+
+    report["persisted_count"] = persisted_count
 
     if return_report:
         return deduped, report
