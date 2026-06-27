@@ -1,0 +1,133 @@
+================================================================================
+BNI BIONS SENTIMENT MONITORING SYSTEM - DOKUMENTASI MENJALANKAN PROGRAM (RUN)
+================================================================================
+
+Dokumentasi ini menjelaskan langkah-langkah untuk melakukan setup, konfigurasi,
+serta menjalankan Backend API, Frontend Dashboard, dan Pipeline Otomatis (Scheduler)
+pada sistem operasi Windows.
+
+--------------------------------------------------------------------------------
+1. PRASYARAT (PREREQUISITES)
+--------------------------------------------------------------------------------
+Pastikan Anda sudah menginstal aplikasi berikut pada komputer Anda:
+- Python (versi 3.10 ke atas)
+- Node.js (versi 18 ke atas)
+- MongoDB (berjalan secara lokal pada port 27017)
+  * Catatan: Jika menggunakan Docker, Anda dapat menjalankan MongoDB dengan perintah:
+    docker-compose up -d mongo
+
+--------------------------------------------------------------------------------
+2. SETUP & INSTALASI DEPENDENSI
+--------------------------------------------------------------------------------
+Buka terminal (Command Prompt atau PowerShell) di direktori root project:
+"c:\Users\IGIN\Documents\bni-bions-sentiment-analysis"
+
+A. Setup Python Virtual Environment & Library Backend:
+   # 1. Buat virtual environment jika belum ada
+   py -m venv .venv
+
+   # 2. Aktifkan virtual environment
+   # Windows (Command Prompt):
+   .venv\Scripts\activate
+   # ATAU Windows (PowerShell):
+   .venv\Scripts\Activate.ps1
+
+   # 3. Upgrade pip dan instal semua dependensi
+   python -m pip install --upgrade pip
+   pip install -e ".[dev,collectors,model]"
+   pip install google-genai
+
+B. Instal Dependensi Frontend (Dashboard):
+   # 1. Masuk ke direktori dashboard
+   cd apps/dashboard
+
+   # 2. Instal library npm
+   npm install
+
+   # 3. Kembali ke direktori utama
+   cd ../..
+
+--------------------------------------------------------------------------------
+3. KONFIGURASI ENVIRONMENT VARIABLES (.env)
+--------------------------------------------------------------------------------
+Pastikan file `.env` sudah ada di direktori root project. Jika belum, salin dari
+`.env.example` lalu isi variabel yang diperlukan:
+
+   # Salin template
+   copy .env.example .env
+
+Isi variabel penting berikut di dalam file `.env`:
+   YOUTUBE_API_KEY=AIzaSy... (API Key YouTube Anda)
+   GEMINI_API_KEYS=AQ.Ab...,AQ.Ab... (Daftar API Key Gemini Anda, pisahkan dengan koma)
+   MONGODB_URI=mongodb://localhost:27017
+   MONGODB_DATABASE=bni_bions_sentiment
+
+--------------------------------------------------------------------------------
+4. CARA MENJALANKAN BACKEND API (FASTAPI)
+--------------------------------------------------------------------------------
+Backend API digunakan oleh dashboard untuk memproses aksi manual dan mengambil data.
+
+Langkah:
+1. Buka terminal baru di direktori root project.
+2. Aktifkan virtual environment:
+   .venv\Scripts\activate
+3. Jalankan server FastAPI dengan uvicorn:
+   python -m uvicorn apps.api.app.main:app --reload
+
+Server backend akan berjalan secara lokal di: http://localhost:8000
+
+--------------------------------------------------------------------------------
+5. CARA MENJALANKAN FRONTEND DASHBOARD (NEXT.JS)
+--------------------------------------------------------------------------------
+Dashboard web interaktif untuk visualisasi grafik sentimen dan kontrol manual.
+
+Langkah:
+1. Buka terminal baru.
+2. Masuk ke direktori dashboard:
+   cd apps/dashboard
+3. Jalankan server Next.js:
+   npm run dev
+
+Dashboard akan berjalan secara lokal dan dapat diakses di: http://localhost:3000
+
+--------------------------------------------------------------------------------
+6. CARA MENJALANKAN PIPELINE OTOMATIS (SCHEDULER)
+--------------------------------------------------------------------------------
+Program ini mendeteksi jadwal penarikan ulasan otomatis (tersegel di database) 
+dan akan mengeksekusi pipeline pada jam 10:00 pagi WIB setiap hari.
+
+Langkah:
+1. Buka terminal baru di direktori root project.
+2. Aktifkan virtual environment:
+   .venv\Scripts\activate
+3. Jalankan scheduler:
+   python -m pipeline.scheduler.run
+
+Catatan: Scheduler ini membaca flag `isActive` dari database. Anda dapat menyalakan/
+mematikan jadwal penarikan otomatis ini langsung melalui sakelar tombol di dashboard.
+
+--------------------------------------------------------------------------------
+7. CARA MENJALANKAN PIPELINE SECARA MANUAL (CLI)
+--------------------------------------------------------------------------------
+Jika ingin melakukan penarikan atau analisis data secara langsung melalui terminal:
+
+Pastikan virtual environment aktif (.venv\Scripts\activate), lalu jalankan:
+
+- Tarik Data Baru (Scraper + API):
+  python -m pipeline.collector.run
+
+- Analisis & Labeling Sentimen dengan Gemini:
+  python sentiment_labeling.py
+
+- Ekspor Data ke CSV/XLSX:
+  python -m pipeline.export.csv_export
+
+--------------------------------------------------------------------------------
+8. CARA MENJALANKAN PENGUJIAN (VERIFIKASI PENGUJIAN UNIT)
+--------------------------------------------------------------------------------
+Untuk memastikan semua fungsi (kolektor, normalisasi, dan sentimen) berjalan aman:
+1. Aktifkan virtual environment:
+   .venv\Scripts\activate
+2. Jalankan perintah pytest:
+   pytest
+================================================================================
